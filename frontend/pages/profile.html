@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profil - EcoThrow</title>
+  <meta name="description" content="Profil pengguna EcoThrow - lihat XP, tier, streak, dan riwayat aktivitas.">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .profile-hero {
+      background: linear-gradient(135deg, var(--emerald-pale) 0%, #fff 70%);
+      border: 1.5px solid var(--emerald-light);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+    }
+
+    .tier-ring {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 3px solid var(--emerald);
+      background: var(--emerald-pale);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+
+    .event-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .65rem 0;
+      border-bottom: 1px solid var(--slate-100);
+    }
+
+    .event-row:last-child {
+      border-bottom: none;
+    }
+
+    .trigger-anim {
+      animation: tpulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes tpulse {
+
+      0%,
+      100% {
+        box-shadow: 0 4px 14px rgba(16, 185, 129, .3);
+      }
+
+      50% {
+        box-shadow: 0 4px 28px rgba(16, 185, 129, .6);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/navbar.js"></script>
+
+  <main style="padding:2.5rem 0 4rem">
+    <div class="container" style="max-width:720px">
+
+      <!-- Search -->
+      <div class="et-card mb-4">
+        <div class="et-card-title" id="lbl-search">Cari Profil Pengguna</div>
+        <div class="d-flex gap-2">
+          <input id="nim-input" class="et-input" placeholder="Masukkan NIM kamu…" style="flex:1">
+          <button class="btn-emerald" onclick="loadProfile()">Cari</button>
+        </div>
+        <p class="text-muted-sm mt-2">Belum terdaftar?
+          <a href="#register-section" style="color:var(--emerald);font-weight:600">Daftar di sini</a>
+        </p>
+      </div>
+
+      <!-- Profile result -->
+      <div id="profile-result"></div>
+
+      <!-- Trigger Throw section -->
+      <div id="trigger-section" style="display:none" class="mb-4">
+        <div class="et-card">
+          <div class="et-card-title" id="lbl-trigger">Trigger Buang Sampah</div>
+          <p style="font-size:.875rem;color:var(--slate-500);margin-bottom:1.25rem">
+            Klik tombol di bawah untuk memberi sinyal ke hardware bahwa kamu siap membuang sampah.
+            Hardware akan aktif, menghitung, lalu poin masuk otomatis ke akunmu.
+          </p>
+          <button class="trigger-btn" id="trigger-btn" onclick="triggerThrow()">
+            <span id="trigger-btn-icon"></span> Saya Ingin Buang Sampah
+          </button>
+          <div id="trigger-status" class="mt-3" style="display:none"></div>
+        </div>
+      </div>
+
+      <hr class="et-divider">
+
+      <!-- Register -->
+      <div class="et-card" id="register-section">
+        <div class="et-card-title" id="lbl-register">Daftar Pengguna Baru</div>
+        <div id="reg-alert"></div>
+        <div class="mb-3">
+          <label class="et-label">NIM</label>
+          <input id="reg-nim" class="et-input" placeholder="Contoh: 13525136">
+        </div>
+        <div class="mb-3">
+          <label class="et-label">Nama Lengkap</label>
+          <input id="reg-name" class="et-input" placeholder="Nama sesuai KTM">
+        </div>
+        <div class="mb-3">
+          <label class="et-label">Fakultas</label>
+          <select id="reg-faculty" class="et-input et-select">
+            <option>STEI</option>
+            <option>FTMD</option>
+            <option>FTTM</option>
+            <option>FTI</option>
+            <option>FMIPA</option>
+            <option>SAPPK</option>
+            <option>FSRD</option>
+            <option>SBM</option>
+            <option>SF</option>
+          </select>
+        </div>
+        <button class="btn-emerald w-100 justify-content-center" id="btn-register" onclick="registerUser()">
+          Daftar Sekarang
+        </button>
+      </div>
+
+      <!-- QR Result -->
+      <div id="qr-result" class="et-card mt-4 text-center" style="display:none">
+        <div id="qr-check-icon" style="color:var(--emerald);margin-bottom:.75rem"></div>
+        <p style="font-size:1.1rem;font-weight:700">Pendaftaran Berhasil!</p>
+        <p class="text-muted-sm mb-3">Kode QR gelang kamu:</p>
+        <div id="qr-code-display" style="font-size:1.1rem;font-weight:700;letter-spacing:3px;
+          background:var(--emerald-pale);border:2px dashed var(--emerald);
+          border-radius:var(--radius);padding:1rem;color:var(--emerald-dark)"></div>
+        <p class="text-muted-sm mt-2" style="font-size:.78rem">Screenshot atau catat kode ini. Tempelkan ke
+          gelang/lanyard.</p>
+        <button class="btn-ghost mt-3" id="btn-print" onclick="printQR()">Cetak QR</button>
+      </div>
+
+    </div>
+  </main>
+
+  <div id="toast-container"></div>
+
+  <script>
+    let currentNIM = null;
+    let triggerPoller = null;
+    let lastXP = 0;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("lbl-search").innerHTML = lucideInline("search", 15) + " Cari Profil Pengguna";
+      document.getElementById("lbl-trigger").innerHTML = lucideInline("wifi", 15) + " Trigger Buang Sampah";
+      document.getElementById("lbl-register").innerHTML = lucideInline("user", 15) + " Daftar Pengguna Baru";
+      document.getElementById("trigger-btn-icon").innerHTML = lucideInline("zap", 20);
+      document.getElementById("btn-register").innerHTML = lucideInline("check-circle", 16) + " Daftar Sekarang";
+      document.getElementById("btn-print").innerHTML = lucideInline("download", 14) + " Cetak QR";
+      document.getElementById("qr-check-icon").innerHTML = lucideInline("check-circle", 40);
+
+      const inp = document.getElementById("nim-input");
+      if (inp) inp.addEventListener("keyup", e => { if (e.key === "Enter") loadProfile(); });
+
+      // Auto-fill from query string
+      const params = new URLSearchParams(window.location.search);
+      const nim = params.get("nim");
+      if (nim) { inp.value = nim; loadProfile(); }
+    });
+
+    async function loadProfile() {
+      const nim = document.getElementById("nim-input").value.trim();
+      const wrap = document.getElementById("profile-result");
+      if (!nim) { showToast("Masukkan NIM dulu", "error"); return; }
+      showLoading(wrap);
+      document.getElementById("trigger-section").style.display = "none";
+      try {
+        const u = await apiGet(`/api/user/${nim}`);
+        currentNIM = nim;
+        lastXP = u.total_xp;
+        renderProfile(u, wrap);
+        document.getElementById("trigger-section").style.display = "block";
+      } catch {
+        showError(wrap, `User dengan NIM <strong>${nim}</strong> tidak ditemukan.`);
+      }
+    }
+
+    function tierEmoji(name) {
+      const map = { "Adamantite": "👑", "Diamond": "💠", "Platinum": "💎", "Gold": "⭐", "Silver": "🪙", "Bronze": "🛡️" };
+      return map[name] || "🛡️";
+    }
+
+    function renderProfile(u, wrap) {
+      const tier = getTier(u.total_xp);
+      const { pct, xpLeft, nextName } = getTierProgress(u.total_xp);
+      const isMax = tier.name === "Adamantite";
+
+      wrap.innerHTML = `
+        <div class="profile-hero mb-4">
+          <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="tier-ring">${tierEmoji(tier.name)}</div>
+            <div>
+              <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:2px">${u.name}</h2>
+              <p class="text-muted-sm">${u.nim} · ${u.faculty}</p>
+              ${levelBadge(u.total_xp)}
+            </div>
+          </div>
+          <div class="mb-1" style="font-size:.8rem;font-weight:600;color:var(--slate-500)">
+            Progres ke ${nextName === "MAX" ? "Tier Tertinggi" : nextName}
+          </div>
+          <div class="rpg-bar-wrap rpg-bar-lg ${isMax ? 'rpg-bar-adamantite' : ''} mb-1">
+            <div class="rpg-bar-fill" style="width:${isMax ? 100 : pct}%"></div>
+          </div>
+          <div class="d-flex justify-content-between text-muted-sm">
+            <span>${u.total_xp.toLocaleString()} XP</span>
+            <span>${isMax ? "✨ Tier Tertinggi!" : xpLeft.toLocaleString() + " XP lagi ke " + nextName}</span>
+          </div>
+        </div>
+
+        <div class="row g-2 mb-4">
+          <div class="col-6">
+            <div class="et-stat">
+              <div class="et-stat-num">${u.total_xp.toLocaleString()}</div>
+              <div class="et-stat-label">Total XP</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="et-stat">
+              <div class="et-stat-num">${u.streak_days}</div>
+              <div class="et-stat-label">Streak Hari</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="et-card mb-4">
+          <div class="et-card-title">10 Aktivitas Terakhir</div>
+          ${u.recent_events?.length ? u.recent_events.map(e => `
+            <div class="event-row">
+              <div>
+                <div style="font-size:.875rem">
+                  <span style="color:${e.verified ? 'var(--emerald)' : 'var(--slate-400)'}">
+                    ${e.verified ? "✓" : "✗"}
+                  </span>
+                  Buang Sampah
+                </div>
+                <div class="text-muted-sm">${relTime(e.timestamp)}</div>
+              </div>
+              <strong class="text-emerald">+${e.points} XP</strong>
+            </div>`).join("") : `<p class="text-muted text-center py-2">Belum ada aktivitas.</p>`}
+          <a href="history.html?nim=${u.nim}" class="btn-ghost btn-ghost-sm mt-2 w-100 justify-content-center">
+            Lihat Semua Riwayat
+          </a>
+        </div>`;
+    }
+
+    function triggerThrow() {
+      if (!currentNIM) { showToast("Cari profil dulu", "error"); return; }
+      const btn = document.getElementById("trigger-btn");
+      const statusEl = document.getElementById("trigger-status");
+
+      btn.disabled = true;
+      btn.classList.add("trigger-anim");
+      btn.innerHTML = `<div class="et-loader" style="border-top-color:#fff;width:18px;height:18px;flex-shrink:0"></div> Menunggu hardware...`;
+
+      statusEl.style.display = "block";
+      statusEl.innerHTML = `
+        <div class="trigger-status trigger-waiting">
+          Hardware sedang mendeteksi kamu. Silakan buang sampah sekarang...
+        </div>`;
+
+      let pollCount = 0;
+      if (triggerPoller) clearInterval(triggerPoller);
+
+      triggerPoller = setInterval(async () => {
+        pollCount++;
+        try {
+          const u = await apiGet(`/api/user/${currentNIM}`);
+          if (u.total_xp > lastXP || pollCount >= 12) {
+            clearInterval(triggerPoller);
+            btn.disabled = false;
+            btn.classList.remove("trigger-anim");
+            btn.innerHTML = `<span id="trigger-btn-icon">${lucideInline("zap", 20)}</span> Saya Ingin Buang Sampah`;
+
+            if (u.total_xp > lastXP) {
+              const gained = u.total_xp - lastXP;
+              statusEl.innerHTML = `
+                <div class="trigger-status trigger-done">
+                  ✓ Berhasil! +${gained} XP diterima. Total: ${u.total_xp.toLocaleString()} XP.
+                </div>`;
+              showToast(`+${gained} XP diterima!`, "success");
+              lastXP = u.total_xp;
+              const wrap = document.getElementById("profile-result");
+              renderProfile(u, wrap);
+            } else {
+              statusEl.innerHTML = `
+                <div class="trigger-status trigger-waiting">
+                  Tidak ada respons dari hardware. Pastikan sampah terbuang & coba lagi.
+                </div>`;
+            }
+          } else {
+            statusEl.innerHTML = `
+              <div class="trigger-status trigger-active">
+                Hardware aktif - menunggu konfirmasi (${pollCount * 5}s)...
+              </div>`;
+          }
+        } catch { /* keep polling */ }
+      }, 5000);
+    }
+
+    async function registerUser() {
+      const nim = document.getElementById("reg-nim").value.trim();
+      const name = document.getElementById("reg-name").value.trim();
+      const fac = document.getElementById("reg-faculty").value;
+      const alertEl = document.getElementById("reg-alert");
+      alertEl.innerHTML = "";
+      if (!nim || !name) {
+        alertEl.innerHTML = `<div class="et-alert et-alert-danger">NIM dan Nama wajib diisi.</div>`; return;
+      }
+      try {
+        const res = await apiPost("/api/user/register", { nim, name, faculty: fac });
+        document.getElementById("qr-result").style.display = "block";
+        document.getElementById("qr-code-display").textContent = res.qr_code;
+        showToast("Pendaftaran berhasil!", "success");
+      } catch (e) {
+        alertEl.innerHTML = `<div class="et-alert et-alert-danger">${e.message}</div>`;
+      }
+    }
+
+    function printQR() {
+      const qr = document.getElementById("qr-code-display").textContent;
+      const w = window.open("", "_blank");
+      w.document.write(`<html><body style="text-align:center;font-family:monospace;padding:2rem">
+        <h2>EcoThrow QR Code</h2><p>Tempelkan ke gelang/lanyard</p>
+        <div style="font-size:1.8rem;font-weight:700;border:3px dashed green;padding:1rem;display:inline-block;margin:1rem">${qr}</div>
+        <script>window.print();<\/script></body></html>`);
+    }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

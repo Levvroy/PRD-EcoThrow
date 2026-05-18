@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Riwayat Pembuangan - EcoThrow</title>
+  <meta name="description" content="Riwayat semua aktivitas buang sampah di EcoThrow ITB.">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .user-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: .75rem 0;
+      border-bottom: 1px solid var(--slate-100);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .user-row:last-child {
+      border-bottom: none;
+    }
+
+    .user-row:hover {
+      background: var(--emerald-pale);
+      margin: 0 -1rem;
+      padding-left: 1rem;
+      padding-right: 1rem;
+      border-radius: var(--radius);
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--emerald-pale);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.1rem;
+      border: 1.5px solid var(--emerald-light);
+    }
+
+    .event-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .6rem 0;
+      border-bottom: 1px solid var(--slate-100);
+    }
+
+    .event-row:last-child {
+      border-bottom: none;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .4);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .modal-box {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      max-width: 560px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .2);
+    }
+
+    .modal-box::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .modal-box::-webkit-scrollbar-thumb {
+      background: var(--emerald-light);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/navbar.js"></script>
+
+  <main style="padding:2.5rem 0 4rem">
+    <div class="container" style="max-width:900px">
+
+      <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-2">
+        <div>
+          <h1 style="font-family:'Libre Baskerville',serif;font-style:italic;font-size:1.75rem;font-weight:700">
+            Riwayat Buang Sampah
+          </h1>
+          <p class="text-muted" style="font-size:.875rem">Semua aktivitas pengguna EcoThrow ITB</p>
+        </div>
+        <button class="btn-ghost btn-ghost-sm" onclick="loadAllUsers()" id="btn-refresh"></button>
+      </div>
+
+      <!-- Search & Filter -->
+      <div class="et-card mb-4">
+        <div class="row g-2">
+          <div class="col-12 col-sm">
+            <div style="position:relative">
+              <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--slate-400)"
+                id="icon-search-inp"></span>
+              <input id="search-input" class="et-input" placeholder="Cari nama atau NIM..."
+                style="padding-left:36px;width:100%" oninput="filterUsers()">
+            </div>
+          </div>
+          <div class="col-12 col-sm-auto">
+            <select id="faculty-filter" class="et-input et-select w-100" onchange="filterUsers()">
+              <option value="">Semua Fakultas</option>
+              <option>STEI</option>
+              <option>FTMD</option>
+              <option>FTTM</option>
+              <option>FTI</option>
+              <option>FMIPA</option>
+              <option>SAPPK</option>
+              <option>FSRD</option>
+              <option>SBM</option>
+              <option>SF</option>
+            </select>
+          </div>
+          <div class="col-12 col-sm-auto">
+            <select id="tier-filter" class="et-input et-select w-100" onchange="filterUsers()">
+              <option value="">Semua Tier</option>
+              <option>Bronze</option>
+              <option>Silver</option>
+              <option>Gold</option>
+              <option>Platinum</option>
+              <option>Diamond</option>
+              <option>Adamantite</option>
+            </select>
+          </div>
+        </div>
+        <p class="text-muted-sm mt-2" id="result-count"></p>
+      </div>
+
+      <!-- User list -->
+      <div class="et-card" id="users-list-wrap">
+        <div class="loading-box py-4">
+          <div class="et-loader"></div><span>Memuat semua pengguna...</span>
+        </div>
+      </div>
+
+      <!-- Also search by NIM directly -->
+      <div class="et-card mt-4">
+        <div class="et-card-title" id="lbl-nim-search">Cari Riwayat Spesifik per NIM</div>
+        <div class="d-flex gap-2">
+          <input id="nim-direct" class="et-input" placeholder="NIM pengguna..." style="flex:1" type="tel"
+            inputmode="numeric">
+          <button class="btn-emerald" onclick="openDetailByNIM()" id="btn-nim-search">Cari</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Modal Detail Riwayat -->
+  <div class="modal-overlay" id="detail-modal" onclick="closeModal(event)">
+    <div class="modal-box" id="modal-content">
+      <div class="loading-box">
+        <div class="et-loader"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script>
+    let allUsers = [];
+    let filteredUsers = [];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("btn-refresh").innerHTML = lucideInline("refresh", 14) + " Refresh";
+      document.getElementById("icon-search-inp").innerHTML = lucideInline("search", 14);
+      document.getElementById("lbl-nim-search").innerHTML = lucideInline("search", 15) + " Cari Riwayat Spesifik per NIM";
+      document.getElementById("btn-nim-search").innerHTML = lucideInline("search", 16) + " Cari";
+
+      // Auto-open NIM from query string
+      const params = new URLSearchParams(window.location.search);
+      const nim = params.get("nim");
+      if (nim) { document.getElementById("nim-direct").value = nim; openDetailByNIM(); }
+
+      loadAllUsers();
+      document.getElementById("nim-direct").addEventListener("keyup", e => { if (e.key === "Enter") openDetailByNIM(); });
+    });
+
+    async function loadAllUsers() {
+      const wrap = document.getElementById("users-list-wrap");
+      wrap.innerHTML = `<div class="loading-box py-4"><div class="et-loader"></div><span>Memuat...</span></div>`;
+      try {
+        allUsers = await apiGet("/api/users");
+        allUsers.sort((a, b) => b.total_xp - a.total_xp);
+        allUsers = allUsers.map((u, i) => ({ ...u, rank: i + 1 }));
+        filteredUsers = [...allUsers];
+        renderUserList(filteredUsers);
+      } catch {
+        showError(wrap, "Tidak dapat memuat data pengguna. Pastikan backend berjalan.");
+      }
+    }
+
+    function filterUsers() {
+      const q = document.getElementById("search-input").value.toLowerCase();
+      const fac = document.getElementById("faculty-filter").value;
+      const tier = document.getElementById("tier-filter").value;
+      filteredUsers = allUsers.filter(u => {
+        const matchQ = !q || u.name.toLowerCase().includes(q) || u.nim.includes(q);
+        const matchFac = !fac || u.faculty === fac;
+        const matchTier = !tier || getTier(u.total_xp).name === tier;
+        return matchQ && matchFac && matchTier;
+      });
+      renderUserList(filteredUsers);
+    }
+
+    function renderUserList(users) {
+      const wrap = document.getElementById("users-list-wrap");
+      document.getElementById("result-count").textContent =
+        `Menampilkan ${users.length} dari ${allUsers.length} pengguna · Klik untuk lihat riwayat detail`;
+
+      if (!users.length) {
+        wrap.innerHTML = `<div class="text-center py-4"><div style="color:var(--slate-300);margin-bottom:.75rem;font-size:2rem">🔍</div><p class="text-muted-sm">Tidak ada pengguna yang sesuai.</p></div>`;
+        return;
+      }
+
+      wrap.innerHTML = users.map(u => {
+        const tier = getTier(u.total_xp);
+        const emo = { "Adamantite": "👑", "Diamond": "💠", "Platinum": "💎", "Gold": "⭐", "Silver": "🪙", "Bronze": "🛡️" };
+        return `
+        <div class="user-row" onclick="openDetail('${u.nim}')">
+          <div class="user-avatar">${emo[tier.name] || "🛡️"}</div>
+          <div style="flex:1;min-width:0">
+            <div class="fw-700 text-truncate">${u.name}</div>
+            <div class="text-muted-sm">${u.nim} · ${u.faculty}</div>
+          </div>
+          <div class="text-end" style="flex-shrink:0">
+            <div class="fw-700 text-emerald" style="font-size:.9rem">${u.total_xp.toLocaleString()} XP</div>
+            ${levelBadge(u.total_xp)}
+          </div>
+          <div style="color:var(--slate-300)">${lucideInline("chevron-right", 16)}</div>
+        </div>`;
+      }).join("");
+    }
+
+    async function openDetail(nim) {
+      const modal = document.getElementById("detail-modal");
+      const box = document.getElementById("modal-content");
+      modal.style.display = "flex";
+      box.innerHTML = `<div class="loading-box py-4"><div class="et-loader"></div><span>Memuat riwayat...</span></div>`;
+      try {
+        const u = await apiGet(`/api/user/${nim}`);
+        const tier = getTier(u.total_xp);
+        const { pct, xpLeft, nextName } = getTierProgress(u.total_xp);
+        const isMax = tier.name === "Adamantite";
+        const emo = { "Adamantite": "👑", "Diamond": "💠", "Platinum": "💎", "Gold": "⭐", "Silver": "🪙", "Bronze": "🛡️" };
+
+        const events = u.recent_events || [];
+        box.innerHTML = `
+          <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="d-flex align-items-center gap-3">
+              <div class="user-avatar" style="width:52px;height:52px;font-size:1.5rem">${emo[tier.name]}</div>
+              <div>
+                <div class="fw-700" style="font-size:1.1rem">${u.name}</div>
+                <div class="text-muted-sm">${u.nim} · ${u.faculty}</div>
+                <div class="mt-1">${levelBadge(u.total_xp)}</div>
+              </div>
+            </div>
+            <button onclick="closeModalBtn()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--slate-400)">
+              ${lucideInline("x", 22)}
+            </button>
+          </div>
+
+          <!-- RPG Progress -->
+          <div class="mb-1" style="font-size:.78rem;font-weight:600;color:var(--slate-500)">
+            Progres ke ${isMax ? "Tier Tertinggi" : nextName}
+          </div>
+          <div class="rpg-bar-wrap ${isMax ? 'rpg-bar-adamantite' : ''} mb-1">
+            <div class="rpg-bar-fill" style="width:${isMax ? 100 : pct}%"></div>
+          </div>
+          <div class="d-flex justify-content-between text-muted-sm mb-4">
+            <span>${u.total_xp.toLocaleString()} XP</span>
+            <span>${isMax ? "✨ Tier Tertinggi!" : xpLeft.toLocaleString() + " XP lagi ke " + nextName}</span>
+          </div>
+
+          <div class="row g-2 mb-4">
+            <div class="col-6">
+              <div class="et-stat" style="padding:.75rem">
+                <div class="et-stat-num" style="font-size:1.25rem">${u.total_xp.toLocaleString()}</div>
+                <div class="et-stat-label">Total XP</div>
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="et-stat" style="padding:.75rem">
+                <div class="et-stat-num" style="font-size:1.25rem">${u.streak_days}</div>
+                <div class="et-stat-label">🔥 Streak Hari</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fw-700 mb-2" style="font-size:.875rem">
+            ${lucideInline("history", 14)} Riwayat Aktivitas (${events.length} event)
+          </div>
+          ${events.length ? events.map(e => `
+          <div class="event-row">
+            <div>
+              <div style="font-size:.875rem;display:flex;align-items:center;gap:6px">
+                <span style="color:${e.verified ? 'var(--emerald)' : '#dc2626'}">
+                  ${e.verified ? "✓" : "✗"}
+                </span>
+                Buang Sampah
+              </div>
+              <div class="text-muted-sm">${relTime(e.timestamp)}</div>
+            </div>
+            <div class="text-end">
+              <strong class="text-emerald">+${e.points} XP</strong>
+              <div style="font-size:.72rem;color:${e.verified ? 'var(--emerald-dark)' : '#dc2626'}">
+                ${e.verified ? "Terverifikasi" : "Tidak Valid"}
+              </div>
+            </div>
+          </div>`).join("") : `<p class="text-muted text-center py-3">Belum ada aktivitas.</p>`}`;
+      } catch {
+        box.innerHTML = `<div class="et-alert et-alert-danger">${lucideInline("alert-triangle", 15)} Gagal memuat data.</div>
+          <button class="btn-ghost mt-2" onclick="closeModalBtn()">Tutup</button>`;
+      }
+    }
+
+    function openDetailByNIM() {
+      const nim = document.getElementById("nim-direct").value.trim();
+      if (!nim) { showToast("Masukkan NIM dulu", "error"); return; }
+      openDetail(nim);
+    }
+
+    function closeModal(e) {
+      if (e.target === document.getElementById("detail-modal")) {
+        document.getElementById("detail-modal").style.display = "none";
+      }
+    }
+    function closeModalBtn() {
+      document.getElementById("detail-modal").style.display = "none";
+    }
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") document.getElementById("detail-modal").style.display = "none";
+    });
+  </script>
+
+
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
