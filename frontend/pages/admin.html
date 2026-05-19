@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Admin Panel - EcoThrow</title>
+  <meta name="description" content="Panel admin EcoThrow - kelola bin, pengguna, dan simulasi hardware.">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <script>
+    // Auth guard - redirect ke login jika bukan admin
+    if (localStorage.getItem("et_admin") !== "true") {
+      window.location.replace("admin-login.html");
+    }
+  </script>
+  <style>
+    .admin-warn {
+      background: #fff7ed;
+      border: 1.5px solid #fed7aa;
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: .82rem;
+      color: #c2410c;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .bin-admin-card {
+      background: #fff;
+      border: 1.5px solid var(--slate-200);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-bottom: .75rem;
+      transition: var(--transition);
+    }
+
+    .bin-admin-card:hover {
+      border-color: var(--emerald);
+    }
+  </style>
+</head>
+
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/navbar.js"></script>
+
+  <main style="padding:2.5rem 0 4rem">
+    <div class="container" style="max-width:1000px">
+
+      <div class="mb-4">
+        <h1 style="font-family:'Libre Baskerville',serif;font-style:italic;font-size:1.75rem;font-weight:700">Admin
+          Panel</h1>
+        <p class="text-muted" style="font-size:.875rem">Kelola bin, pengguna, dan simulasikan data hardware</p>
+      </div>
+
+      <div class="admin-warn" id="admin-warn">
+        Halaman ini hanya untuk admin / tim pengembang EcoThrow. Jangan dibagikan ke umum.
+      </div>
+
+      <!-- Tabs -->
+      <div class="et-tab-wrap mb-4">
+        <button class="et-tab active" id="tab-bins" onclick="switchPanel('bins')"><span id="icon-tab-bins"></span>
+          Kelola Bin</button>
+        <button class="et-tab" id="tab-users" onclick="switchPanel('users')"><span id="icon-tab-users"></span> Kelola
+          User</button>
+        <button class="et-tab" id="tab-sim" onclick="switchPanel('sim')"><span id="icon-tab-sim"></span>
+          Simulasi</button>
+        <button class="et-tab" id="tab-throw" onclick="switchPanel('throw')"><span id="icon-tab-throw"></span> Manual
+          Throw</button>
+      </div>
+
+      <!-- PANEL: BINS -->
+      <div id="panel-bins">
+        <div class="et-card mb-4">
+          <div class="et-card-title" id="lbl-add-bin">Tambah Bin Baru</div>
+          <div id="add-bin-alert"></div>
+          <div class="d-flex gap-2">
+            <input id="bin-loc" class="et-input" placeholder="Lokasi bin (contoh: Depan GKU Timur)" style="flex:1">
+            <button class="btn-emerald" onclick="addBin()" id="btn-add-bin">Tambah</button>
+          </div>
+        </div>
+        <div class="et-card">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="et-card-title mb-0" id="lbl-bin-list">Daftar Bin</div>
+            <button class="btn-ghost btn-ghost-sm" onclick="loadBins()" id="btn-refresh-bins"></button>
+          </div>
+          <div id="bins-admin-wrap">
+            <div class="loading-box">
+              <div class="et-loader"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL: USERS -->
+      <div id="panel-users" style="display:none">
+        <div class="et-card">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="et-card-title mb-0" id="lbl-all-users">Semua Pengguna</div>
+            <button class="btn-ghost btn-ghost-sm" onclick="loadUsers()" id="btn-refresh-users"></button>
+          </div>
+          <div class="table-responsive">
+            <table class="et-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Nama</th>
+                  <th>NIM</th>
+                  <th>Fakultas</th>
+                  <th>Tier</th>
+                  <th>XP</th>
+                  <th>QR Code</th>
+                </tr>
+              </thead>
+              <tbody id="admin-user-tbody">
+                <tr>
+                  <td colspan="7" class="text-center py-3">
+                    <div class="et-loader" style="margin:auto"></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL: SIMULASI -->
+      <div id="panel-sim" style="display:none">
+        <div class="et-alert et-alert-info mb-4" id="sim-info">
+          Panel ini mensimulasikan data dari hardware ESP32 + sensor HC-SR04. Berguna untuk tes sistem saat hardware
+          belum tersambung.
+        </div>
+        <div class="et-card mb-4">
+          <div class="et-card-title" id="lbl-sim-bin">Simulasi Update Level Bin</div>
+          <p class="text-muted-sm mb-3">Simulasikan sensor ultrasonik mengirim data kapasitas bin</p>
+          <div class="mb-3">
+            <label class="et-label">Pilih Bin</label>
+            <select id="sim-bin-id" class="et-input et-select"></select>
+          </div>
+          <div class="mb-3">
+            <label class="et-label">Kapasitas: <strong id="sim-cap-val">50</strong>%</label>
+            <input type="range" id="sim-capacity" min="0" max="100" value="50" class="form-range"
+              oninput="document.getElementById('sim-cap-val').textContent=this.value">
+          </div>
+          <button class="btn-emerald" onclick="simUpdateBin()" id="btn-sim-send">Kirim ke Server</button>
+          <div id="sim-bin-result" class="mt-3"></div>
+        </div>
+        <div class="et-card">
+          <div class="et-card-title" id="lbl-sim-all">Simulasi Massal - Isi Semua Bin</div>
+          <p class="text-muted-sm mb-3">Simulasikan semua bin terisi secara bertahap</p>
+          <button class="btn-ghost" onclick="simAllBins()" id="btn-sim-all">Jalankan Simulasi</button>
+          <div id="sim-all-result" class="mt-3"></div>
+        </div>
+      </div>
+
+      <!-- PANEL: MANUAL THROW -->
+      <div id="panel-throw" style="display:none">
+        <div class="et-card mb-4">
+          <div class="et-card-title" id="lbl-manual-throw">Simulasi Event Buang Sampah</div>
+          <p class="text-muted-sm mb-3">Kirim event throw secara manual - tes gamifikasi tanpa hardware</p>
+          <div id="throw-alert"></div>
+          <div class="mb-3">
+            <label class="et-label">QR Code Pengguna</label>
+            <input id="throw-qr" class="et-input" placeholder="Contoh: ECO-13525136-AB12CD">
+          </div>
+          <div class="mb-3">
+            <label class="et-label">Pilih Bin</label>
+            <select id="throw-bin" class="et-input et-select"></select>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="et-label">Level Bin Sebelum (%)</label>
+              <input id="throw-before" type="number" class="et-input" value="30" min="0" max="100">
+            </div>
+            <div class="col-6">
+              <label class="et-label">Level Bin Sesudah (%)</label>
+              <input id="throw-after" type="number" class="et-input" value="38" min="0" max="100">
+            </div>
+          </div>
+          <button class="btn-emerald w-100 justify-content-center" onclick="sendThrow()" id="btn-send-throw">Kirim Event
+            Throw</button>
+          <div id="throw-result" class="mt-3"></div>
+        </div>
+        <div class="et-card">
+          <div class="et-card-title" id="lbl-quick-throw">Quick Throw - Isi Otomatis</div>
+          <p class="text-muted-sm mb-3">Pilih pengguna & bin, data simulasi diisi otomatis</p>
+          <div class="mb-3">
+            <label class="et-label">QR Code Pengguna</label>
+            <input id="quick-qr" class="et-input" placeholder="QR code dari profil pengguna">
+          </div>
+          <div class="mb-3">
+            <label class="et-label">Pilih Bin</label>
+            <select id="quick-bin" class="et-input et-select"></select>
+          </div>
+          <button class="btn-emerald" onclick="quickThrow()" id="btn-quick-throw">Quick Throw (+5%)</button>
+          <div id="quick-result" class="mt-3"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <div id="toast-container"></div>
+
+  <script>
+    const PANELS = ["bins", "users", "sim", "throw"];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("admin-warn").innerHTML = lucideInline("alert-triangle", 15) + " Halaman ini hanya untuk admin / tim pengembang EcoThrow.";
+      document.getElementById("icon-tab-bins").innerHTML = lucideInline("trash2", 15);
+      document.getElementById("icon-tab-users").innerHTML = lucideInline("users", 15);
+      document.getElementById("icon-tab-sim").innerHTML = lucideInline("cpu", 15);
+      document.getElementById("icon-tab-throw").innerHTML = lucideInline("send", 15);
+      document.getElementById("lbl-add-bin").innerHTML = lucideInline("plus", 15) + " Tambah Bin Baru";
+      document.getElementById("lbl-bin-list").innerHTML = lucideInline("wifi", 15) + " Daftar Bin";
+      document.getElementById("btn-refresh-bins").innerHTML = lucideInline("refresh", 14) + " Refresh";
+      document.getElementById("btn-refresh-users").innerHTML = lucideInline("refresh", 14) + " Refresh";
+      document.getElementById("btn-add-bin").innerHTML = lucideInline("plus", 14) + " Tambah";
+      document.getElementById("lbl-all-users").innerHTML = lucideInline("users", 15) + " Semua Pengguna";
+      document.getElementById("sim-info").innerHTML = lucideInline("cpu", 15) + " Panel ini mensimulasikan data dari hardware ESP32 + sensor HC-SR04.";
+      document.getElementById("lbl-sim-bin").innerHTML = lucideInline("wifi", 15) + " Simulasi Update Level Bin";
+      document.getElementById("btn-sim-send").innerHTML = lucideInline("send", 16) + " Kirim ke Server";
+      document.getElementById("lbl-sim-all").innerHTML = lucideInline("zap", 15) + " Simulasi Massal";
+      document.getElementById("btn-sim-all").innerHTML = lucideInline("zap", 15) + " Jalankan Simulasi";
+      document.getElementById("lbl-manual-throw").innerHTML = lucideInline("send", 15) + " Simulasi Event Buang Sampah";
+      document.getElementById("btn-send-throw").innerHTML = lucideInline("send", 16) + " Kirim Event Throw";
+      document.getElementById("lbl-quick-throw").innerHTML = lucideInline("zap", 15) + " Quick Throw";
+      document.getElementById("btn-quick-throw").innerHTML = lucideInline("zap", 16) + " Quick Throw (+5%)";
+
+      loadBins();
+      loadUsers();
+    });
+
+    function switchPanel(name) {
+      PANELS.forEach(p => {
+        document.getElementById(`panel-${p}`).style.display = p === name ? "block" : "none";
+        document.getElementById(`tab-${p}`).classList.toggle("active", p === name);
+      });
+    }
+
+    async function loadBins() {
+      const wrap = document.getElementById("bins-admin-wrap");
+      try {
+        const bins = await apiGet("/api/bins");
+        populateBinSelects(bins);
+        if (!bins.length) {
+          wrap.innerHTML = `<div class="et-alert et-alert-info">Belum ada bin. Tambah bin di atas.</div>`;
+          return;
+        }
+        wrap.innerHTML = bins.map(b => {
+          const pct = Math.round(b.capacity_pct);
+          const barColor = pct >= 80 ? "#f87171" : pct >= 50 ? "#fb923c" : "var(--emerald)";
+          return `
+          <div class="bin-admin-card">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <strong>${b.location}</strong>
+                <div class="text-muted-sm">${b.id}</div>
+              </div>
+              ${statusBadge(b.status)}
+            </div>
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <div class="rpg-bar-wrap" style="flex:1">
+                <div class="rpg-bar-fill" style="width:${pct}%;background:${barColor}"></div>
+              </div>
+              <strong style="width:38px;text-align:right">${pct}%</strong>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="text-muted-sm">Update: ${relTime(b.last_updated)}</span>
+              <button class="btn-ghost btn-ghost-sm" onclick="resetBin('${b.id}')">Reset 0%</button>
+            </div>
+          </div>`;
+        }).join("");
+      } catch { showError(wrap, "Gagal memuat bin."); }
+    }
+
+    function populateBinSelects(bins) {
+      ["sim-bin-id", "throw-bin", "quick-bin"].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        sel.innerHTML = bins.length
+          ? bins.map(b => `<option value="${b.id}">${b.location}</option>`).join("")
+          : `<option value="">- Belum ada bin -</option>`;
+      });
+    }
+
+    async function addBin() {
+      const loc = document.getElementById("bin-loc").value.trim();
+      const alertEl = document.getElementById("add-bin-alert");
+      if (!loc) { alertEl.innerHTML = `<div class="et-alert et-alert-danger">Masukkan lokasi bin.</div>`; return; }
+      try {
+        await apiPost("/api/bin/add", { location: loc });
+        document.getElementById("bin-loc").value = "";
+        alertEl.innerHTML = `<div class="et-alert et-alert-success">✓ Bin berhasil ditambahkan!</div>`;
+        loadBins(); showToast("Bin baru ditambahkan!", "success");
+        setTimeout(() => alertEl.innerHTML = "", 3000);
+      } catch (e) { alertEl.innerHTML = `<div class="et-alert et-alert-danger">${e.message}</div>`; }
+    }
+
+    async function resetBin(binId) {
+      try {
+        await apiPost("/api/bin/update", { bin_id: binId, capacity_pct: 0 });
+        showToast("Bin direset ke 0%", "success"); loadBins();
+      } catch { showToast("Gagal reset bin", "error"); }
+    }
+
+    async function loadUsers() {
+      const tbody = document.getElementById("admin-user-tbody");
+      try {
+        const users = await apiGet("/api/users");
+        if (!users.length) {
+          tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-3">Belum ada pengguna.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = users.map((u, i) => `
+          <tr>
+            <td class="text-muted-sm">${i + 1}</td>
+            <td><strong>${u.name}</strong></td>
+            <td class="text-muted-sm">${u.nim}</td>
+            <td class="text-muted-sm">${u.faculty}</td>
+            <td>${levelBadge(u.total_xp)}</td>
+            <td><strong class="text-emerald">${u.total_xp.toLocaleString()}</strong></td>
+            <td><code style="font-size:.72rem;background:var(--slate-100);padding:2px 6px;border-radius:4px">${u.qr_code}</code></td>
+          </tr>`).join("");
+      } catch { tbody.innerHTML = `<tr><td colspan="7"><div class="et-alert et-alert-danger">Gagal memuat user.</div></td></tr>`; }
+    }
+
+    async function simUpdateBin() {
+      const binId = document.getElementById("sim-bin-id").value;
+      const cap = parseFloat(document.getElementById("sim-capacity").value);
+      const res = document.getElementById("sim-bin-result");
+      if (!binId) { res.innerHTML = `<div class="et-alert et-alert-danger">Pilih bin dulu.</div>`; return; }
+      try {
+        await apiPost("/api/bin/update", { bin_id: binId, capacity_pct: cap });
+        res.innerHTML = `<div class="et-alert et-alert-success">✓ Bin diupdate ke ${cap}%</div>`;
+        loadBins(); showToast(`Bin → ${cap}%`, "success");
+        setTimeout(() => res.innerHTML = "", 3000);
+      } catch (e) { res.innerHTML = `<div class="et-alert et-alert-danger">${e.message}</div>`; }
+    }
+
+    async function simAllBins() {
+      const res = document.getElementById("sim-all-result");
+      res.innerHTML = `<div class="et-alert et-alert-info">Menjalankan simulasi...</div>`;
+      try {
+        const bins = await apiGet("/api/bins");
+        if (!bins.length) { res.innerHTML = `<div class="et-alert et-alert-warn">Belum ada bin.</div>`; return; }
+        const results = [];
+        for (const b of bins) {
+          const newCap = Math.min(100, Math.round(b.capacity_pct + Math.random() * 30 + 10));
+          await apiPost("/api/bin/update", { bin_id: b.id, capacity_pct: newCap });
+          results.push(`${b.location}: ${Math.round(b.capacity_pct)}% → ${newCap}%`);
+        }
+        res.innerHTML = `<div class="et-alert et-alert-success">✓ Simulasi selesai!<br>${results.map(r => "• " + r).join("<br>")}</div>`;
+        loadBins();
+      } catch (e) { res.innerHTML = `<div class="et-alert et-alert-danger">${e.message}</div>`; }
+    }
+
+    async function sendThrow() {
+      const qr = document.getElementById("throw-qr").value.trim();
+      const binId = document.getElementById("throw-bin").value;
+      const before = parseFloat(document.getElementById("throw-before").value);
+      const after = parseFloat(document.getElementById("throw-after").value);
+      const alertEl = document.getElementById("throw-alert");
+      const res = document.getElementById("throw-result");
+      alertEl.innerHTML = ""; res.innerHTML = "";
+      if (!qr || !binId) { alertEl.innerHTML = `<div class="et-alert et-alert-danger">QR code dan bin wajib diisi.</div>`; return; }
+      try {
+        const data = await apiPost("/api/throw", { user_qr_code: qr, bin_id: binId, bin_level_before: before, bin_level_after: after });
+        if (data.verified) {
+          res.innerHTML = `
+            <div class="et-alert et-alert-success">
+              ✓ <strong>${data.message}</strong><br>
+              XP: <strong>+${data.xp_earned}</strong> · Total: <strong>${data.new_total_xp.toLocaleString()}</strong>
+              · Tier: ${levelBadge(data.new_total_xp)} · Streak: <strong>${data.streak_days}d</strong>
+            </div>`;
+          showToast(`+${data.xp_earned} XP!`, "success");
+        } else {
+          res.innerHTML = `<div class="et-alert et-alert-warn">${data.message}</div>`;
+        }
+      } catch (e) { res.innerHTML = `<div class="et-alert et-alert-danger">${e.message}</div>`; }
+    }
+
+    async function quickThrow() {
+      const qr = document.getElementById("quick-qr").value.trim();
+      const binId = document.getElementById("quick-bin").value;
+      const res = document.getElementById("quick-result");
+      if (!qr || !binId) { res.innerHTML = `<div class="et-alert et-alert-danger">Isi QR code dan pilih bin.</div>`; return; }
+      try {
+        const bins = await apiGet("/api/bins");
+        const bin = bins.find(b => b.id === binId);
+        const before = bin ? bin.capacity_pct : 30;
+        const after = Math.min(100, before + 5 + Math.random() * 5);
+        const data = await apiPost("/api/throw", { user_qr_code: qr, bin_id: binId, bin_level_before: before, bin_level_after: after });
+        if (data.verified) {
+          res.innerHTML = `<div class="et-alert et-alert-success">⚡ Quick throw berhasil! +${data.xp_earned} XP → ${levelBadge(data.new_total_xp)}</div>`;
+          showToast(`+${data.xp_earned} XP!`, "success"); loadBins();
+        } else {
+          res.innerHTML = `<div class="et-alert et-alert-warn">Tidak terverifikasi - coba lagi.</div>`;
+        }
+      } catch (e) { res.innerHTML = `<div class="et-alert et-alert-danger">${e.message}</div>`; }
+    }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

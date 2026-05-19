@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>EcoThrow - Smart Waste Bin ITB</title>
+  <meta name="description"
+    content="Setiap sampah yang kamu buang = XP. Naiki leaderboard, saingi temanmu - bersama EcoThrow ITB.">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+  <script src="js/api.js"></script>
+  <script src="js/navbar.js"></script>
+
+  <!-- ── HERO ─────────────────────────────────────────── -->
+  <section class="et-hero">
+    <div class="container" style="max-width:1140px">
+      <div class="row align-items-center g-4">
+        <div class="col-lg-6">
+          <div class="hero-hook">
+          </div>
+          <h1>Teman-temanmu<br>sudah naik level.<br><span class="brand-accent" style="font-style:normal">Kapan
+              giliranmu?</span></h1>
+          <span class="hero-question">Setiap sampah yang kamu buang = XP.</span>
+          <p class="tagline" style="margin-top:.75rem">
+            Saingi mereka di leaderboard. Buktikan kamu yang paling peduli.
+            Naik dari <strong>Bronze</strong> ke <strong style="color:var(--emerald-dark)">Adamantite</strong>
+          </p>
+          <div class="d-flex gap-2 flex-wrap mt-3">
+            <a href="pages/leaderboard.html" class="btn-emerald">
+              <span id="icon-lb"></span> Lihat Siapa yang Unggul
+            </a>
+            <a href="pages/profile.html" class="btn-ghost">
+              <span id="icon-prof"></span> Profil Saya
+            </a>
+          </div>
+        </div>
+        <div class="col-lg-6 d-none d-lg-flex justify-content-center">
+          <div
+            style="width:280px;height:280px;background:var(--emerald-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--emerald-light);position:relative">
+            <div class="text-center">
+              <div id="hero-icon" style="color:var(--emerald)"></div>
+              <div
+                style="font-family:'Libre Baskerville',serif;font-style:italic;color:var(--emerald-dark);font-size:1.1rem;font-weight:700;margin-top:8px">
+                EcoThrow</div>
+            </div>
+            <!-- Floating XP badge -->
+            <div
+              style="position:absolute;top:20px;right:-10px;background:#fff;border:1.5px solid var(--emerald-light);border-radius:20px;padding:5px 12px;font-size:.75rem;font-weight:700;color:var(--emerald-dark);box-shadow:var(--shadow)">
+              +XP tiap buang! ⚡
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Trigger Throw on Landing ────────────────── -->
+      <div class="hero-trigger">
+        <div class="trigger-pill" id="hero-trigger-pill">
+          <span id="icon-trigger-pill"></span> Langsung dari sini
+        </div>
+        <div class="hero-trigger-title">Mau buang sampah sekarang?</div>
+        <div class="hero-trigger-sub">Masukkan NIM kamu, tekan tombol, lalu buang. Hardware langsung aktif.</div>
+        <div class="row g-2 align-items-center">
+          <div class="col-12 col-sm">
+            <input id="ht-nim" class="et-input" placeholder="NIM (contoh: 13525136)" style="width:100%;margin-bottom:0"
+              type="tel" inputmode="numeric">
+          </div>
+          <div class="col-12 col-sm-auto">
+            <button id="ht-btn" class="trigger-btn w-100" onclick="heroTrigger()"
+              style="width:100%;justify-content:center;padding:12px 24px">
+              <span id="icon-ht-btn"></span> Buang Sampah
+            </button>
+          </div>
+        </div>
+        <div id="ht-status" class="mt-3" style="display:none"></div>
+      </div>
+    </div>
+  </section>
+
+  <main style="padding:2.5rem 0 4rem">
+    <div class="container" style="max-width:1140px">
+
+      <!-- Live counter banner -->
+      <div class="row g-3 mb-5">
+        <div class="col-6 col-md-4">
+          <div class="et-stat">
+            <div class="et-stat-num" id="st-users">-</div>
+            <div class="et-stat-label" id="lbl-st-users">Mahasiswa Terdaftar</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4">
+          <div class="et-stat">
+            <div class="et-stat-num" id="st-throws">-</div>
+            <div class="et-stat-label" id="lbl-st-throws">Total Pembuangan</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4">
+          <div class="et-stat">
+            <div class="et-stat-num" id="st-bins">-</div>
+            <div class="et-stat-label" id="lbl-st-bins">Bin Aktif</div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="et-divider">
+
+      <!-- Bin Status -->
+      <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <div>
+            <h2 class="et-section-title" id="bins-heading">Status Tempat Sampah</h2>
+            <p class="et-section-sub">Pembaruan langsung dari sensor IoT</p>
+          </div>
+          <button class="btn-ghost btn-ghost-sm" onclick="loadBins()" id="btn-refresh-bins"></button>
+        </div>
+        <div id="bins-wrap" class="row g-3">
+          <div class="col-12">
+            <div class="loading-box">
+              <div class="et-loader"></div><span>Memuat data bin...</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <hr class="et-divider">
+
+      <!-- About CTA -->
+      <section class="mb-5">
+        <div class="et-card d-flex align-items-center justify-content-between gap-3 flex-wrap"
+          style="background:var(--emerald-pale);border-color:var(--emerald-light)">
+          <div>
+            <div style="font-weight:700;font-size:1rem;margin-bottom:.25rem">Penasaran cara kerjanya?</div>
+            <div style="font-size:.84rem;color:var(--slate-500)">Pelajari sistem tier, formula XP, dan IoT di balik
+              EcoThrow.</div>
+          </div>
+          <a href="pages/about.html" class="btn-emerald flex-shrink-0" id="btn-about"></a>
+        </div>
+      </section>
+
+      <hr class="et-divider">
+
+      <!-- Top 3 -->
+      <section class="mb-2">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+          <h2 class="et-section-title" id="top3-heading">Top 3 Saat Ini</h2>
+          <a href="pages/leaderboard.html" class="btn-ghost btn-ghost-sm" id="btn-all-lb"></a>
+        </div>
+        <div id="top3-wrap" class="row g-3"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <div id="toast-container"></div>
+
+  <style>
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: .3;
+      }
+    }
+  </style>
+
+  <script>
+    let htPoller = null;
+    let htLastXP = 0;
+    let htCurrentNIM = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Icons
+      document.getElementById("icon-lb").innerHTML = lucideInline("trophy", 16);
+      document.getElementById("icon-prof").innerHTML = lucideInline("user", 16);
+      document.getElementById("hero-icon").innerHTML = lucideInline("trash2", 64);
+      document.getElementById("icon-trigger-pill").innerHTML = lucideInline("zap", 11);
+      document.getElementById("icon-ht-btn").innerHTML = lucideInline("zap", 18);
+      document.getElementById("lbl-st-users").innerHTML = lucideInline("users", 13) + " Mahasiswa Terdaftar";
+      document.getElementById("lbl-st-throws").innerHTML = lucideInline("trash2", 13) + " Total Pembuangan";
+      document.getElementById("lbl-st-bins").innerHTML = lucideInline("wifi", 13) + " Bin Aktif";
+      document.getElementById("bins-heading").innerHTML = lucideInline("wifi", 18) + " Status Tempat Sampah";
+      document.getElementById("btn-refresh-bins").innerHTML = lucideInline("refresh", 14) + " Refresh";
+      document.getElementById("top3-heading").innerHTML = lucideInline("trophy", 18) + " Top 3 Saat Ini";
+      document.getElementById("btn-all-lb").innerHTML = "Lihat semua " + lucideInline("arrow-right", 14);
+      document.getElementById("btn-about").innerHTML = lucideInline("info", 16) + " Pelajari Selengkapnya";
+
+
+      // Enter key on NIM input
+      document.getElementById("ht-nim").addEventListener("keyup", e => {
+        if (e.key === "Enter") heroTrigger();
+      });
+
+      loadStats(); loadBins(); loadTop3();
+      setInterval(() => { loadStats(); loadBins(); }, 30000);
+    });
+
+    // ── Hero Trigger Throw ─────────────────────────────────────────
+    async function heroTrigger() {
+      const nim = document.getElementById("ht-nim").value.trim();
+      const btn = document.getElementById("ht-btn");
+      const statusEl = document.getElementById("ht-status");
+      if (!nim) { showToast("Masukkan NIM kamu dulu", "error"); document.getElementById("ht-nim").focus(); return; }
+
+      // Validate user exists
+      try {
+        const u = await apiGet(`/api/user/${nim}`);
+        htCurrentNIM = nim;
+        htLastXP = u.total_xp;
+      } catch {
+        showToast("NIM tidak ditemukan. Daftar di halaman Profil.", "error");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.classList.add("trigger-anim");
+      btn.innerHTML = `<div class="et-loader" style="border-top-color:#fff;width:18px;height:18px;flex-shrink:0"></div> Hardware sedang aktif...`;
+      statusEl.style.display = "block";
+      statusEl.innerHTML = `<div class="trigger-status trigger-waiting">${lucideInline("wifi", 15)} Hardware aktif - silakan buang sampah sekarang!</div>`;
+
+      let pollCount = 0;
+      if (htPoller) clearInterval(htPoller);
+
+      htPoller = setInterval(async () => {
+        pollCount++;
+        try {
+          const u = await apiGet(`/api/user/${htCurrentNIM}`);
+          if (u.total_xp > htLastXP || pollCount >= 12) {
+            clearInterval(htPoller);
+            btn.disabled = false;
+            btn.classList.remove("trigger-anim");
+            btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
+
+            if (u.total_xp > htLastXP) {
+              const gained = u.total_xp - htLastXP;
+              statusEl.innerHTML = `<div class="trigger-status trigger-done">${lucideInline("check-circle", 15)} Berhasil! <strong>+${gained} XP</strong> diterima. Total: ${u.total_xp.toLocaleString()} XP · ${levelBadge(u.total_xp)}</div>`;
+              showToast(`+${gained} XP! Level kamu naik!`, "success");
+              htLastXP = u.total_xp;
+              loadTop3();
+            } else {
+              statusEl.innerHTML = `<div class="trigger-status trigger-waiting">${lucideInline("alert-triangle", 15)} Tidak ada respons. Pastikan sampah sudah terbuang & coba lagi.</div>`;
+            }
+          } else {
+            statusEl.innerHTML = `<div class="trigger-status trigger-active">${lucideInline("wifi", 15)} Hardware mendeteksi... (${pollCount * 5}s)</div>`;
+          }
+        } catch { /* keep polling */ }
+      }, 5000);
+    }
+
+    // ── Stats ──────────────────────────────────────────────────────
+    async function loadStats() {
+      try {
+        const d = await apiGet("/api/stats");
+        document.getElementById("st-users").textContent = fmtNum(d.total_users);
+        document.getElementById("st-throws").textContent = fmtNum(d.total_throws);
+        document.getElementById("st-bins").textContent = fmtNum(d.total_bins);
+      } catch { /* silently fail */ }
+    }
+
+    async function loadBins() {
+      const wrap = document.getElementById("bins-wrap");
+      try {
+        const bins = await apiGet("/api/bins");
+        if (!bins.length) { wrap.innerHTML = `<div class="col-12"><p class="text-muted">Belum ada data bin.</p></div>`; return; }
+        wrap.innerHTML = bins.map(b => {
+          const pct = Math.round(b.capacity_pct);
+          const cls = pct >= 80 ? "bin-penuh" : pct >= 50 ? "bin-sedang" : "bin-normal";
+          const barColor = pct >= 80 ? "#f87171" : pct >= 50 ? "#fb923c" : "var(--emerald)";
+          return `
+          <div class="col-6 col-md-4 col-xl-3">
+            <div class="bin-card ${cls}">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="bin-capacity">${pct}%</div>
+                ${statusBadge(b.status)}
+              </div>
+              <div class="bin-loc mb-2">${b.location}</div>
+              <div class="rpg-bar-wrap">
+                <div class="rpg-bar-fill" style="width:${pct}%;background:${barColor}"></div>
+              </div>
+              <div class="text-muted-sm mt-2">${relTime(b.last_updated)}</div>
+            </div>
+          </div>`;
+        }).join("");
+      } catch {
+        wrap.innerHTML = `<div class="col-12">
+          <div class="et-alert et-alert-warn">${lucideInline("alert-triangle", 15)} Tidak dapat terhubung ke server backend.</div></div>`;
+      }
+    }
+
+    async function loadTop3() {
+      const wrap = document.getElementById("top3-wrap");
+      try {
+        const board = await apiGet("/api/leaderboard?limit=3");
+        if (!board.length) { wrap.innerHTML = `<div class="col-12"><p class="text-muted">Belum ada data.</p></div>`; return; }
+        wrap.innerHTML = board.map(u => `
+          <div class="col-md-4">
+            <div class="et-card d-flex align-items-center gap-3">
+              ${rankNum(u.rank)}
+              <div style="flex:1;min-width:0">
+                <div class="fw-700 text-truncate">${u.name}</div>
+                <div class="text-muted-sm">${u.faculty}</div>
+              </div>
+              <div class="text-end" style="flex-shrink:0">
+                <div class="fw-700 text-emerald">${fmtNum(u.total_xp)} XP</div>
+                ${levelBadge(u.total_xp)}
+              </div>
+            </div>
+          </div>`).join("");
+      } catch { wrap.innerHTML = `<div class="col-12"><p class="text-muted">-</p></div>`; }
+    }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

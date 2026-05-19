@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Tentang EcoThrow - Sistem, Tier & Cara Kerja</title>
+  <meta name="description"
+    content="Pelajari sistem tier RPG EcoThrow, cara kerja IoT, dan bagaimana setiap sampah berubah jadi XP nyata.">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    /* ── Desktop Staircase ───────────────────── */
+    .stair-desktop {
+      display: flex;
+      align-items: flex-end;
+      gap: 0;
+      overflow-x: auto;
+      padding-bottom: .5rem;
+    }
+
+    .stair-col {
+      flex-shrink: 0;
+      width: 108px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      transition: transform .2s ease;
+    }
+
+    .stair-col:hover {
+      transform: translateY(-6px);
+    }
+
+    .stair-platform {
+      width: 100%;
+      border-radius: 10px 10px 0 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: .75rem .5rem .6rem;
+      position: relative;
+      box-shadow: 0 -4px 14px rgba(0, 0, 0, .12);
+    }
+
+    .stair-icon {
+      color: rgba(255, 255, 255, .9);
+      margin-bottom: .3rem;
+    }
+
+    .stair-name {
+      font-weight: 800;
+      font-size: .78rem;
+      color: #fff;
+      letter-spacing: .02em;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, .35);
+    }
+
+    .stair-xp {
+      font-size: .62rem;
+      color: rgba(255, 255, 255, .8);
+      margin-top: 1px;
+    }
+
+    .stair-top-badge {
+      position: absolute;
+      top: -26px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      border: 1.5px solid var(--slate-200);
+      border-radius: 20px;
+      padding: 1px 9px;
+      font-size: .63rem;
+      font-weight: 700;
+      white-space: nowrap;
+      box-shadow: var(--shadow);
+    }
+
+    .stair-ground {
+      height: 5px;
+      background: var(--slate-200);
+      border-radius: 3px;
+    }
+
+    @media (max-width: 767px) {
+      .stair-desktop {
+        display: none;
+      }
+    }
+
+    /* ── Mobile Tier Grid (3 cols) ───────────── */
+    .tier-grid {
+      display: none;
+      grid-template-columns: repeat(3, 1fr);
+      gap: .5rem;
+    }
+
+    .tier-grid-card {
+      border-radius: var(--radius-lg);
+      padding: .75rem .5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: .3rem;
+      border: 1.5px solid transparent;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tier-grid-num {
+      position: absolute;
+      top: 5px;
+      left: 7px;
+      font-size: .6rem;
+      font-weight: 800;
+      color: rgba(255, 255, 255, .7);
+    }
+
+    .tier-grid-icon {
+      color: rgba(255, 255, 255, .95);
+    }
+
+    .tier-grid-name {
+      font-size: .72rem;
+      font-weight: 800;
+      color: #fff;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+    }
+
+    .tier-grid-xp {
+      font-size: .6rem;
+      color: rgba(255, 255, 255, .8);
+    }
+
+    @media (max-width: 767px) {
+      .tier-grid {
+        display: grid;
+      }
+    }
+
+    /* ── Tier platform colors ─────────────────── */
+    .s-copper {
+      background: linear-gradient(145deg, #da8a4e, #a0522d);
+      height: 60px;
+    }
+
+    .s-bronze {
+      background: linear-gradient(145deg, #c97c3a, #7a4a20);
+      height: 86px;
+    }
+
+    .s-silver {
+      background: linear-gradient(145deg, #94a3b8, #64748b);
+      height: 114px;
+    }
+
+    .s-gold {
+      background: linear-gradient(145deg, #f59e0b, #b45309);
+      height: 143px;
+    }
+
+    .s-platinum {
+      background: linear-gradient(145deg, #7dd3fc, #0369a1);
+      height: 172px;
+    }
+
+    .s-diamond {
+      background: linear-gradient(145deg, #67e8f9, #0891b2);
+      height: 200px;
+    }
+
+    .s-mithril {
+      background: linear-gradient(145deg, #818cf8, #4338ca);
+      height: 229px;
+    }
+
+    .s-orichalcum {
+      background: linear-gradient(145deg, #fb923c, #c2410c);
+      height: 258px;
+    }
+
+    .s-adamantium {
+      background: linear-gradient(145deg, #34d399, #064e3b);
+      height: 295px;
+      animation: adm-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes adm-pulse {
+
+      0%,
+      100% {
+        filter: brightness(1)
+      }
+
+      50% {
+        filter: brightness(1.1)
+      }
+    }
+
+    /* Mobile cards: fixed height, no ascending */
+    .tier-grid-card.s-copper,
+    .tier-grid-card.s-bronze,
+    .tier-grid-card.s-silver,
+    .tier-grid-card.s-gold,
+    .tier-grid-card.s-platinum,
+    .tier-grid-card.s-diamond,
+    .tier-grid-card.s-mithril,
+    .tier-grid-card.s-orichalcum,
+    .tier-grid-card.s-adamantium {
+      height: 90px !important;
+    }
+
+    /* ── How-it-works steps ───────────────────── */
+    .step-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .step-row {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+      position: relative;
+    }
+
+    .step-row:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      left: 19px;
+      top: 44px;
+      bottom: -12px;
+      width: 2px;
+      background: var(--emerald-light);
+    }
+
+    .step-num {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--emerald);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: .85rem;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, .3);
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-body {
+      padding-bottom: 1.75rem;
+    }
+
+    .step-title {
+      font-weight: 700;
+      font-size: .95rem;
+      margin-bottom: .2rem;
+    }
+
+    .step-desc {
+      font-size: .82rem;
+      color: var(--slate-500);
+      line-height: 1.6;
+    }
+
+    /* ── Feature detail ───────────────────────── */
+    .fd-card {
+      border: 1.5px solid var(--slate-200);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      background: #fff;
+      height: 100%;
+      transition: var(--transition);
+    }
+
+    .fd-card:hover {
+      border-color: var(--emerald-light);
+      box-shadow: var(--shadow);
+      transform: translateY(-2px);
+    }
+
+    .fd-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius);
+      background: var(--emerald-pale);
+      color: var(--emerald);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: .85rem;
+    }
+
+    .fd-title {
+      font-weight: 700;
+      font-size: .9rem;
+      margin-bottom: .35rem;
+    }
+
+    .fd-desc {
+      font-size: .82rem;
+      color: var(--slate-500);
+      line-height: 1.6;
+    }
+
+    /* ── Section label ────────────────────────── */
+    /* .sec-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--emerald-pale);
+      color: var(--emerald-dark);
+      border: 1px solid var(--emerald-light);
+      padding: 3px 11px;
+      border-radius: 20px;
+      font-size: .73rem;
+      font-weight: 700;
+      margin-bottom: .6rem;
+    } */
+
+    /* ── Mobile responsive table ─────────────── */
+    @media (max-width: 575px) {
+      .tier-table-col-hide {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <script src="../js/api.js"></script>
+  <script src="../js/navbar.js"></script>
+
+  <main style="padding:2.5rem 0 5rem">
+    <div class="container" style="max-width:960px">
+
+      <!-- ── Hero ──────────────────────────────── -->
+      <div class="text-center mb-5">
+        <div class="sec-label" id="lbl-hero"></div>
+        <h1
+          style="font-family:'Libre Baskerville',serif;font-style:italic;font-size:clamp(1.75rem,5vw,2.75rem);font-weight:700;line-height:1.2">
+          Buang sampah bukan kewajiban.<br>
+          <span style="color:var(--emerald)">Ini kompetisi.</span>
+        </h1>
+        <p class="mx-auto mt-3" style="color:var(--slate-500);max-width:540px;font-size:.95rem;line-height:1.7">
+          EcoThrow menggabungkan IoT, gamifikasi, dan data riset untuk mengubah kebiasaan buang sampah jadi sesuatu
+          yang benar-benar kamu kejar setiap hari.
+        </p>
+      </div>
+
+      <hr class="et-divider">
+
+      <!-- ── Tier System ────────────────────────── -->
+      <section class="mb-5">
+        <div class="sec-label" id="lbl-tier"></div>
+        <h2 class="et-section-title mb-1">Sistem Tier</h2>
+        <p class="et-section-sub mb-4">9 tingkatan dari material terendah ke terkeras. Setiap tier mencerminkan dedikasi
+          nyata.</p>
+
+        <!-- Desktop: Ascending Staircase -->
+        <div class="stair-desktop pb-2" id="stair-desktop"></div>
+        <div class="stair-ground mb-4 d-none d-md-block"></div>
+
+        <!-- Mobile: 3×3 grid -->
+        <div class="tier-grid mb-4" id="tier-grid"></div>
+
+        <!-- Detail table -->
+        <div class="et-card">
+          <div class="table-responsive">
+            <table class="et-table" style="font-size:.82rem;min-width:320px">
+              <thead>
+                <tr>
+                  <th>Tier</th>
+                  <th>XP</th>
+                  <th class="tier-table-col-hide">~Buang</th>
+                  <th class="tier-table-col-hide">Streak Bonus</th>
+                </tr>
+              </thead>
+              <tbody id="tier-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <hr class="et-divider">
+
+      <!-- ── Cara Kerja ──────────────────────────── -->
+      <section class="mb-5">
+        <div class="sec-label" id="lbl-how"></div>
+        <h2 class="et-section-title mb-1">Cara Kerja EcoThrow</h2>
+        <p class="et-section-sub mb-4">Dari sentuhan layar sampai XP masuk - prosesnya transparan dan real.</p>
+
+        <div class="row g-4">
+          <div class="col-lg-7">
+            <div class="step-wrap" id="steps-wrap"></div>
+          </div>
+          <div class="col-lg-5">
+            <div class="et-card mb-3" style="background:var(--emerald-pale);border-color:var(--emerald-light)">
+              <div class="et-card-title" id="lbl-formula"></div>
+              <div
+                style="font-family:'Libre Baskerville',serif;font-style:italic;font-size:1.2rem;color:var(--emerald-darker);text-align:center;padding:.5rem 0">
+                XP = Volume × Streak Multiplier
+              </div>
+              <p style="font-size:.78rem;color:var(--slate-500);text-align:center;margin-top:.35rem">
+                Konsisten 7 hari berturut = 2× XP per buang
+              </p>
+            </div>
+            <div class="et-card">
+              <div class="et-card-title" id="lbl-valid"></div>
+              <p style="font-size:.82rem;color:var(--slate-600);line-height:1.65">
+                Hardware menolak data palsu otomatis. Perubahan level bin &lt;2% = throw tidak dihitung. Ini menjamin
+                <strong>integritas leaderboard</strong>.
+              </p>
+              <div class="d-flex gap-2 mt-2 flex-wrap">
+                <span
+                  style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:20px;padding:2px 9px;font-size:.72rem;font-weight:600">✓
+                  Verified by hardware</span>
+                <span
+                  style="background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:20px;padding:2px 9px;font-size:.72rem;font-weight:600">✗
+                  Invalid → 0 XP</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <hr class="et-divider">
+
+      <!-- ── Features ──────────────────────────── -->
+      <section class="mb-5">
+        <div class="sec-label" id="lbl-feat"></div>
+        <h2 class="et-section-title mb-1">Kenapa EcoThrow?</h2>
+        <p class="et-section-sub mb-4">Setiap fitur dirancang untuk satu tujuan: membuat kamu konsisten.</p>
+        <div class="row g-3" id="feat-grid"></div>
+      </section>
+
+      <hr class="et-divider">
+
+      <!-- ── CTA ───────────────────────────────── -->
+      <div class="et-card text-center" style="background:var(--emerald-pale);border-color:var(--emerald-light)">
+        <h2 style="font-family:'Libre Baskerville',serif;font-style:italic;font-size:1.4rem;margin-bottom:.4rem">
+          Siap naik dari Copper?
+        </h2>
+        <p style="color:var(--slate-500);font-size:.87rem;margin-bottom:1rem">
+          Teman-temanmu sudah mulai mengumpulkan XP. Mulai throw pertamamu sekarang.
+        </p>
+        <div class="d-flex gap-2 justify-content-center flex-wrap">
+          <a href="profile.html" class="btn-emerald" id="cta-start"></a>
+          <a href="leaderboard.html" class="btn-ghost" id="cta-lb"></a>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <div id="toast-container"></div>
+
+  <script>
+    // ── Tier definitions ──────────────────────────────────────────────
+    const TIER_DEFS = [
+      { name: "Copper", xp: "0–299", xpNum: 0, throws: "~0–6×", streak: "1×", cls: "s-copper" },
+      { name: "Bronze", xp: "300–799", xpNum: 300, throws: "~6–16×", streak: "1.25×", cls: "s-bronze" },
+      { name: "Silver", xp: "800–1.999", xpNum: 800, throws: "~16–40×", streak: "1.5×", cls: "s-silver" },
+      { name: "Gold", xp: "2.000–4.999", xpNum: 2000, throws: "~40–100×", streak: "1.75×", cls: "s-gold" },
+      { name: "Platinum", xp: "5.000–9.999", xpNum: 5000, throws: "~100–200×", streak: "2×", cls: "s-platinum" },
+      { name: "Diamond", xp: "10.000–19.999", xpNum: 10000, throws: "~200–400×", streak: "2×", cls: "s-diamond" },
+      { name: "Mithril", xp: "20.000–34.999", xpNum: 20000, throws: "~400–700×", streak: "2×", cls: "s-mithril" },
+      { name: "Orichalcum", xp: "35.000–59.999", xpNum: 35000, throws: "~700–1.2k×", streak: "2×", cls: "s-orichalcum" },
+      { name: "Adamantium", xp: "60.000+", xpNum: 60000, throws: "1.200+×", streak: "2×", cls: "s-adamantium" },
+    ];
+
+    const STEPS = [
+      { title: "Masukkan NIM & Tekan Trigger", desc: "Buka EcoThrow, masukkan NIM, tekan tombol \"Saya Ingin Buang Sampah\". Ini sinyal ke sistem bahwa kamu siap.", icon: "user" },
+      { title: "Hardware Standby", desc: "Sensor ESP32 + ultrasonik HC-SR04 aktif. Website mulai polling setiap 5 detik menunggu respons hardware.", icon: "wifi" },
+      { title: "Sampah Masuk, Sensor Membaca", desc: "Perubahan ketinggian ≥2% terdeteksi. Data dikirim ke API dalam hitungan detik secara otomatis.", icon: "activity" },
+      { title: "XP Masuk, Profil Update", desc: "Backend hitung XP × streak multiplier. Website update langsung - tidak perlu refresh manual.", icon: "zap" },
+    ];
+
+    const FEATS = [
+      { icon: "zap", title: "1 Klik, Langsung Jalan", desc: "Trigger hardware dari website - tidak perlu app tambahan. Buang sampah, XP masuk otomatis." },
+      { icon: "trophy", title: "Saingi Teman-temanmu", desc: "Leaderboard realtime per individu dan per-fakultas. Siapa paling konsisten tampil di puncak." },
+      { icon: "crown", title: "9 Tier RPG", desc: "Copper → Bronze → Silver → Gold → Platinum → Diamond → Mithril → Orichalcum → Adamantium." },
+      { icon: "flame", title: "Streak Multiplier", desc: "7 hari berturut = 2× XP per buang. Putus? Mulai dari 1 lagi. Konsistensi adalah kunci." },
+      { icon: "cpu", title: "IoT Sesungguhnya", desc: "ESP32 + ultrasonik HC-SR04 terhubung langsung ke API. Kapasitas bin terpantau realtime." },
+      { icon: "bar-chart", title: "Data Terbuka untuk Riset", desc: "Semua data tersimpan dan dapat diekspor. Pola buang sampah per-fakultas untuk riset kampus." },
+    ];
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Section labels
+      document.getElementById("lbl-tier").innerHTML = lucideInline("shield", 13) + " Sistem Tier";
+      document.getElementById("lbl-how").innerHTML = lucideInline("zap", 13) + " Cara Kerja";
+      document.getElementById("lbl-feat").innerHTML = lucideInline("star", 13) + " Fitur";
+      document.getElementById("lbl-formula").innerHTML = lucideInline("activity", 15) + " Formula XP";
+      document.getElementById("lbl-valid").innerHTML = lucideInline("check-circle", 15) + " Validasi Otomatis";
+      document.getElementById("cta-start").innerHTML = lucideInline("user", 15) + " Daftar & Mulai";
+      document.getElementById("cta-lb").innerHTML = lucideInline("trophy", 15) + " Lihat Leaderboard";
+
+      // ── Desktop staircase ─────────────────────────
+      const shieldSvg = (sz, opacity) =>
+        `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,${opacity})" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+
+      document.getElementById("stair-desktop").innerHTML = TIER_DEFS.map((t, i) => `
+        <div class="stair-col">
+          ${i === TIER_DEFS.length - 1 ? `<div class="stair-top-badge" style="background:var(--emerald);color:#fff;border-color:var(--emerald)">Tier Tertinggi</div>` : ""}
+          ${i === 0 ? `<div class="stair-top-badge">Mulai di sini</div>` : ""}
+          <div class="stair-platform ${t.cls}">
+            <div class="stair-icon">${shieldSvg(22, 0.9)}</div>
+            <div class="stair-name">${t.name}</div>
+            <div class="stair-xp">${t.xp}</div>
+          </div>
+        </div>`).join("");
+
+      // ── Mobile 3×3 grid ───────────────────────────
+      document.getElementById("tier-grid").innerHTML = TIER_DEFS.map((t, i) => `
+        <div class="tier-grid-card ${t.cls}">
+          <div class="tier-grid-num">${i + 1}</div>
+          <div class="tier-grid-icon">${shieldSvg(18, 0.9)}</div>
+          <div class="tier-grid-name">${t.name}</div>
+          <div class="tier-grid-xp">${t.xp} XP</div>
+        </div>`).join("");
+
+      // ── Tier table ────────────────────────────────
+      document.getElementById("tier-table-body").innerHTML = TIER_DEFS.map(t => `
+        <tr ${t.name === "Adamantium" ? 'style="background:var(--emerald-pale)"' : ""}>
+          <td><span class="tier-badge tier-${t.name.toLowerCase()}">${lucideInline("shield", 11)} ${t.name}</span></td>
+          <td style="font-size:.8rem">${t.xp} XP</td>
+          <td class="tier-table-col-hide text-muted-sm">${t.throws} buang</td>
+          <td class="tier-table-col-hide text-muted-sm">${t.streak}</td>
+        </tr>`).join("");
+
+      // ── Steps ─────────────────────────────────────
+      document.getElementById("steps-wrap").innerHTML = STEPS.map((s, i) => `
+        <div class="step-row">
+          <div class="step-num">${i + 1}</div>
+          <div class="step-body">
+            <div class="step-title">${lucideInline(s.icon, 14)} ${s.title}</div>
+            <div class="step-desc">${s.desc}</div>
+          </div>
+        </div>`).join("");
+
+      // ── Feature cards ─────────────────────────────
+      document.getElementById("feat-grid").innerHTML = FEATS.map(f => `
+        <div class="col-12 col-sm-6 col-lg-4">
+          <div class="fd-card">
+            <div class="fd-icon">${lucideInline(f.icon, 20)}</div>
+            <div class="fd-title">${f.title}</div>
+            <div class="fd-desc">${f.desc}</div>
+          </div>
+        </div>`).join("");
+    });
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
