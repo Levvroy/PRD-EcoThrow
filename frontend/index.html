@@ -71,7 +71,7 @@
           <div class="col-12 col-sm-auto">
             <button id="ht-btn" class="trigger-btn w-100" onclick="heroTrigger()"
               style="width:100%;justify-content:center;padding:12px 24px">
-              <span id="icon-ht-btn"></span> Saya Ingin Buang Sampah
+              <span id="icon-ht-btn"></span> Buang Sampah
             </button>
           </div>
         </div>
@@ -235,7 +235,7 @@
             clearInterval(htPoller);
             btn.disabled = false;
             btn.classList.remove("trigger-anim");
-            btn.innerHTML = `${lucideInline("zap", 18)} Saya Ingin Buang Sampah`;
+            btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
 
             if (u.total_xp > htLastXP) {
               const gained = u.total_xp - htLastXP;

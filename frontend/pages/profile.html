@@ -66,7 +66,6 @@
   <main style="padding:2.5rem 0 4rem">
     <div class="container" style="max-width:720px">
 
-      <!-- Search -->
       <div class="et-card mb-4">
         <div class="et-card-title" id="lbl-search">Cari Profil Pengguna</div>
         <div class="d-flex gap-2">
@@ -78,10 +77,8 @@
         </p>
       </div>
 
-      <!-- Profile result -->
       <div id="profile-result"></div>
 
-      <!-- Trigger Throw section -->
       <div id="trigger-section" style="display:none" class="mb-4">
         <div class="et-card">
           <div class="et-card-title" id="lbl-trigger">Trigger Buang Sampah</div>
@@ -98,7 +95,6 @@
 
       <hr class="et-divider">
 
-      <!-- Register -->
       <div class="et-card" id="register-section">
         <div class="et-card-title" id="lbl-register">Daftar Pengguna Baru</div>
         <div id="reg-alert"></div>
@@ -129,7 +125,6 @@
         </button>
       </div>
 
-      <!-- QR Result -->
       <div id="qr-result" class="et-card mt-4 text-center" style="display:none">
         <div id="qr-check-icon" style="color:var(--emerald);margin-bottom:.75rem"></div>
         <p style="font-size:1.1rem;font-weight:700">Pendaftaran Berhasil!</p>
@@ -164,38 +159,51 @@
       const inp = document.getElementById("nim-input");
       if (inp) inp.addEventListener("keyup", e => { if (e.key === "Enter") loadProfile(); });
 
-      // Auto-fill from query string
+      // Cek URL parameter atau Memori Lokal (localStorage)
       const params = new URLSearchParams(window.location.search);
-      const nim = params.get("nim");
-      if (nim) { inp.value = nim; loadProfile(); }
+      const urlNim = params.get("nim");
+      const savedNim = localStorage.getItem("et_saved_nim");
+      
+      const targetNim = urlNim || savedNim;
+      if (targetNim && inp) { 
+          inp.value = targetNim; 
+          loadProfile(); 
+      }
     });
 
     async function loadProfile() {
       const nim = document.getElementById("nim-input").value.trim();
       const wrap = document.getElementById("profile-result");
       if (!nim) { showToast("Masukkan NIM dulu", "error"); return; }
+      
       showLoading(wrap);
       document.getElementById("trigger-section").style.display = "none";
+      
       try {
         const u = await apiGet(`/api/user/${nim}`);
         currentNIM = nim;
         lastXP = u.total_xp;
+        
+        // Simpan NIM ke memori browser agar tidak perlu login terus
+        localStorage.setItem("et_saved_nim", nim); 
+        
         renderProfile(u, wrap);
         document.getElementById("trigger-section").style.display = "block";
       } catch {
-        showError(wrap, `User dengan NIM <strong>${nim}</strong> tidak ditemukan.`);
+        showError(wrap, `User dengan NIM <strong>${nim}</strong> tidak ditemukan. Silakan daftar di bawah.`);
       }
     }
 
     function tierEmoji(name) {
-      const map = { "Adamantite": "👑", "Diamond": "💠", "Platinum": "💎", "Gold": "⭐", "Silver": "🪙", "Bronze": "🛡️" };
+      const map = { "Adamantium": "👑", "Diamond": "💠", "Platinum": "💎", "Gold": "⭐", "Silver": "🪙", "Bronze": "🛡️" };
       return map[name] || "🛡️";
     }
 
     function renderProfile(u, wrap) {
       const tier = getTier(u.total_xp);
       const { pct, xpLeft, nextName } = getTierProgress(u.total_xp);
-      const isMax = tier.name === "Adamantite";
+      
+      const isMax = tier.name === "Adamantium"; 
 
       wrap.innerHTML = `
         <div class="profile-hero mb-4">
@@ -315,14 +323,24 @@
       const fac = document.getElementById("reg-faculty").value;
       const alertEl = document.getElementById("reg-alert");
       alertEl.innerHTML = "";
+      
       if (!nim || !name) {
-        alertEl.innerHTML = `<div class="et-alert et-alert-danger">NIM dan Nama wajib diisi.</div>`; return;
+        alertEl.innerHTML = `<div class="et-alert et-alert-danger">NIM dan Nama wajib diisi.</div>`; 
+        return;
       }
+      
       try {
         const res = await apiPost("/api/user/register", { nim, name, faculty: fac });
+        
+        localStorage.setItem("et_saved_nim", nim);
+        
         document.getElementById("qr-result").style.display = "block";
         document.getElementById("qr-code-display").textContent = res.qr_code;
         showToast("Pendaftaran berhasil!", "success");
+        
+        document.getElementById("nim-input").value = nim;
+        setTimeout(loadProfile, 1500); 
+        
       } catch (e) {
         alertEl.innerHTML = `<div class="et-alert et-alert-danger">${e.message}</div>`;
       }
