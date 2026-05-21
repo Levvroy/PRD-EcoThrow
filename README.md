@@ -1,4 +1,4 @@
-# 🗑️ EcoThrow - Smart Waste Bin with Gamification
+# EcoThrow - Smart Waste Bin with Gamification
 
 <div align="center">
 
@@ -11,8 +11,6 @@
 ![License](https://img.shields.io/badge/Lisensi-MIT-green?style=flat-square)
 
 **Kelompok 9 · PRD K51 · STEI-K ITB 2025**
-
-> *Buang sampah bukan kewajiban. Ini kompetisi.*
 
 EcoThrow menggabungkan **IoT** (ESP32 + sensor ultrasonik HC-SR04), **gamifikasi RPG 9-tier**, dan **data riset real-time** untuk mengubah kebiasaan membuang sampah mahasiswa menjadi aktivitas yang menyenangkan dan terukur.
 
