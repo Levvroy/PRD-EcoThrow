@@ -45,6 +45,9 @@ body {
   background: var(--slate-50);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  /* Kunci horizontal scroll di semua halaman */
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 a {
@@ -66,9 +69,15 @@ img {
 .et-navbar {
   background: #fff;
   border-bottom: 1.5px solid var(--slate-200);
+  position: -webkit-sticky; /* Safari */
   position: sticky;
   top: 0;
   z-index: 1000;
+  /* Safe area: mencegah konten terpotong di iPhone notch / Dynamic Island */
+  padding-left:  env(safe-area-inset-left,  0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  /* JANGAN tambah transform/will-change di sini —
+     itu memutus position:sticky di iOS Safari (WebKit bug) */
 }
 
 .et-brand {
@@ -1020,6 +1029,7 @@ img {
   justify-content: space-around;
   align-items: center;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, .07);
+  /* JANGAN tambah transform/will-change — itu bisa memutus fixed di iOS */
 }
 
 .mob-nav-item {
@@ -1075,7 +1085,9 @@ img {
   }
 
   body {
-    padding-bottom: 76px;
+    /* FIX: 76px → calc agar memperhitungkan home indicator iPhone (±34px).
+       Tanpa ini, konten halaman tertutup mob-nav di iPhone. */
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Larger tap targets on mobile */

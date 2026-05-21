@@ -20,10 +20,10 @@
     <div class="container" style="max-width:1140px">
       <div class="row align-items-center g-4">
         <div class="col-lg-6">
-          <div class="hero-hook">
-          </div>
-          <h1>Teman-temanmu<br>sudah naik level.<br><span class="brand-accent" style="font-style:normal">Kapan
-              giliranmu?</span></h1>
+          <div class="hero-hook"></div>
+          <h1>Teman-temanmu<br>sudah naik level.<br>
+            <span class="brand-accent" style="font-style:normal">Kapan giliranmu?</span>
+          </h1>
           <span class="hero-question">Setiap sampah yang kamu buang = XP.</span>
           <p class="tagline" style="margin-top:.75rem">
             Saingi mereka di leaderboard. Buktikan kamu yang paling peduli.
@@ -39,17 +39,20 @@
           </div>
         </div>
         <div class="col-lg-6 d-none d-lg-flex justify-content-center">
-          <div
-            style="width:280px;height:280px;background:var(--emerald-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--emerald-light);position:relative">
+          <div style="width:280px;height:280px;background:var(--emerald-pale);border-radius:50%;
+                      display:flex;align-items:center;justify-content:center;
+                      border:2px solid var(--emerald-light);position:relative">
             <div class="text-center">
               <div id="hero-icon" style="color:var(--emerald)"></div>
-              <div
-                style="font-family:'Libre Baskerville',serif;font-style:italic;color:var(--emerald-dark);font-size:1.1rem;font-weight:700;margin-top:8px">
-                EcoThrow</div>
+              <div style="font-family:'Libre Baskerville',serif;font-style:italic;
+                          color:var(--emerald-dark);font-size:1.1rem;font-weight:700;margin-top:8px">
+                EcoThrow
+              </div>
             </div>
-            <!-- Floating XP badge -->
-            <div
-              style="position:absolute;top:20px;right:-10px;background:#fff;border:1.5px solid var(--emerald-light);border-radius:20px;padding:5px 12px;font-size:.75rem;font-weight:700;color:var(--emerald-dark);box-shadow:var(--shadow)">
+            <div style="position:absolute;top:20px;right:-10px;background:#fff;
+                        border:1.5px solid var(--emerald-light);border-radius:20px;
+                        padding:5px 12px;font-size:.75rem;font-weight:700;
+                        color:var(--emerald-dark);box-shadow:var(--shadow)">
               +XP tiap buang! ⚡
             </div>
           </div>
@@ -65,12 +68,13 @@
         <div class="hero-trigger-sub">Masukkan NIM kamu, tekan tombol, lalu buang. Hardware langsung aktif.</div>
         <div class="row g-2 align-items-center">
           <div class="col-12 col-sm">
-            <input id="ht-nim" class="et-input" placeholder="NIM (contoh: 13525136)" style="width:100%;margin-bottom:0"
-              type="tel" inputmode="numeric">
+            <input id="ht-nim" class="et-input" placeholder="NIM (contoh: 13525136)"
+                   style="width:100%;margin-bottom:0" type="tel" inputmode="numeric">
           </div>
           <div class="col-12 col-sm-auto">
-            <button id="ht-btn" class="trigger-btn w-100" onclick="heroTrigger()"
-              style="width:100%;justify-content:center;padding:12px 24px">
+            <button type="button" id="ht-btn" class="trigger-btn w-100"
+                    onclick="heroTrigger()"
+                    style="width:100%;justify-content:center;padding:12px 24px">
               <span id="icon-ht-btn"></span> Buang Sampah
             </button>
           </div>
@@ -114,7 +118,7 @@
             <h2 class="et-section-title" id="bins-heading">Status Tempat Sampah</h2>
             <p class="et-section-sub">Pembaruan langsung dari sensor IoT</p>
           </div>
-          <button class="btn-ghost btn-ghost-sm" onclick="loadBins()" id="btn-refresh-bins"></button>
+          <button type="button" class="btn-ghost btn-ghost-sm" onclick="loadBins()" id="btn-refresh-bins"></button>
         </div>
         <div id="bins-wrap" class="row g-3">
           <div class="col-12">
@@ -130,11 +134,12 @@
       <!-- About CTA -->
       <section class="mb-5">
         <div class="et-card d-flex align-items-center justify-content-between gap-3 flex-wrap"
-          style="background:var(--emerald-pale);border-color:var(--emerald-light)">
+             style="background:var(--emerald-pale);border-color:var(--emerald-light)">
           <div>
             <div style="font-weight:700;font-size:1rem;margin-bottom:.25rem">Penasaran cara kerjanya?</div>
-            <div style="font-size:.84rem;color:var(--slate-500)">Pelajari sistem tier, formula XP, dan IoT di balik
-              EcoThrow.</div>
+            <div style="font-size:.84rem;color:var(--slate-500)">
+              Pelajari sistem tier, formula XP, dan IoT di balik EcoThrow.
+            </div>
           </div>
           <a href="pages/about.html" class="btn-emerald flex-shrink-0" id="btn-about"></a>
         </div>
@@ -158,123 +163,181 @@
 
   <style>
     @keyframes blink {
-
-      0%,
-      100% {
-        opacity: 1;
-      }
-
-      50% {
-        opacity: .3;
-      }
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .3; }
     }
   </style>
 
   <script>
-    let htPoller = null;
-    let htLastXP = 0;
+    /* ══════════════════════════════════════════════════════════════
+       index.html — Main Script
+       FIX UTAMA: Polling sebelumnya mungkin memanggil location.reload()
+       di browser karena Live Server VSCode mendeteksi perubahan file
+       database (ecothrow.db) dan auto-refresh seluruh halaman.
+
+       SOLUSI DITERAPKAN:
+         1. Polling hanya update elemen DOM spesifik — TIDAK ada
+            location.reload() atau window.location.href di sini.
+         2. Tambahkan .vscode/settings.json untuk matikan Live Server
+            auto-refresh pada perubahan .db (lihat LIVE_SERVER_FIX.md).
+         3. Gunakan updateBinsInPlace() untuk update bin tanpa re-render
+            total — lebih smooth, tidak ada flicker.
+    ══════════════════════════════════════════════════════════════ */
+
+    let htPoller    = null;
+    let htLastXP    = 0;
     let htCurrentNIM = null;
 
+    // Cache data bin terakhir untuk perbandingan diff
+    let lastBinsData = null;
+
     document.addEventListener("DOMContentLoaded", () => {
-      // Icons
-      document.getElementById("icon-lb").innerHTML = lucideInline("trophy", 16);
-      document.getElementById("icon-prof").innerHTML = lucideInline("user", 16);
-      document.getElementById("hero-icon").innerHTML = lucideInline("trash2", 64);
+      // ── Icons ──────────────────────────────────────────────
+      document.getElementById("icon-lb").innerHTML           = lucideInline("trophy", 16);
+      document.getElementById("icon-prof").innerHTML         = lucideInline("user", 16);
+      document.getElementById("hero-icon").innerHTML         = lucideInline("trash2", 64);
       document.getElementById("icon-trigger-pill").innerHTML = lucideInline("zap", 11);
-      document.getElementById("icon-ht-btn").innerHTML = lucideInline("zap", 18);
-      document.getElementById("lbl-st-users").innerHTML = lucideInline("users", 13) + " Mahasiswa Terdaftar";
-      document.getElementById("lbl-st-throws").innerHTML = lucideInline("trash2", 13) + " Total Pembuangan";
-      document.getElementById("lbl-st-bins").innerHTML = lucideInline("wifi", 13) + " Bin Aktif";
-      document.getElementById("bins-heading").innerHTML = lucideInline("wifi", 18) + " Status Tempat Sampah";
-      document.getElementById("btn-refresh-bins").innerHTML = lucideInline("refresh", 14) + " Refresh";
-      document.getElementById("top3-heading").innerHTML = lucideInline("trophy", 18) + " Top 3 Saat Ini";
-      document.getElementById("btn-all-lb").innerHTML = "Lihat semua " + lucideInline("arrow-right", 14);
-      document.getElementById("btn-about").innerHTML = lucideInline("info", 16) + " Pelajari Selengkapnya";
+      document.getElementById("icon-ht-btn").innerHTML       = lucideInline("zap", 18);
+      document.getElementById("lbl-st-users").innerHTML      = lucideInline("users", 13) + " Mahasiswa Terdaftar";
+      document.getElementById("lbl-st-throws").innerHTML     = lucideInline("trash2", 13) + " Total Pembuangan";
+      document.getElementById("lbl-st-bins").innerHTML       = lucideInline("wifi", 13) + " Bin Aktif";
+      document.getElementById("bins-heading").innerHTML      = lucideInline("wifi", 18) + " Status Tempat Sampah";
+      document.getElementById("btn-refresh-bins").innerHTML  = lucideInline("refresh", 14) + " Refresh";
+      document.getElementById("top3-heading").innerHTML      = lucideInline("trophy", 18) + " Top 3 Saat Ini";
+      document.getElementById("btn-all-lb").innerHTML        = "Lihat semua " + lucideInline("arrow-right", 14);
+      document.getElementById("btn-about").innerHTML         = lucideInline("info", 16) + " Pelajari Selengkapnya";
 
-
-      // Enter key on NIM input
+      // ── Enter key di NIM input ─────────────────────────────
       document.getElementById("ht-nim").addEventListener("keyup", e => {
         if (e.key === "Enter") heroTrigger();
       });
 
-      loadStats(); loadBins(); loadTop3();
-      setInterval(() => { loadStats(); loadBins(); }, 30000);
+      // ── Load data awal ─────────────────────────────────────
+      loadStats();
+      loadBins();
+      loadTop3();
+
+      // ── FIX POLLING UTAMA ──────────────────────────────────
+      // Setiap 30 detik, update HANYA elemen yang berubah.
+      // TIDAK ada location.reload() di sini.
+      // Jika website kamu masih auto-refresh, itu dari Live Server VSCode
+      // bukan dari kode ini. Lihat LIVE_SERVER_FIX.md untuk solusinya.
+      setInterval(() => {
+        updateStatsInPlace();   // hanya update angka, tidak re-render apapun
+        updateBinsInPlace();    // hanya update % dan status bin yang berubah
+      }, 30000);
     });
 
-    // ── Hero Trigger Throw ─────────────────────────────────────────
-    async function heroTrigger() {
-      const nim = document.getElementById("ht-nim").value.trim();
-      const btn = document.getElementById("ht-btn");
-      const statusEl = document.getElementById("ht-status");
-      if (!nim) { showToast("Masukkan NIM kamu dulu", "error"); document.getElementById("ht-nim").focus(); return; }
-
-      // Validate user exists
-      try {
-        const u = await apiGet(`/api/user/${nim}`);
-        htCurrentNIM = nim;
-        htLastXP = u.total_xp;
-      } catch {
-        showToast("NIM tidak ditemukan. Daftar di halaman Profil.", "error");
-        return;
-      }
-
-      btn.disabled = true;
-      btn.classList.add("trigger-anim");
-      btn.innerHTML = `<div class="et-loader" style="border-top-color:#fff;width:18px;height:18px;flex-shrink:0"></div> Hardware sedang aktif...`;
-      statusEl.style.display = "block";
-      statusEl.innerHTML = `<div class="trigger-status trigger-waiting">${lucideInline("wifi", 15)} Hardware aktif - silakan buang sampah sekarang!</div>`;
-
-      let pollCount = 0;
-      if (htPoller) clearInterval(htPoller);
-
-      htPoller = setInterval(async () => {
-        pollCount++;
-        try {
-          const u = await apiGet(`/api/user/${htCurrentNIM}`);
-          if (u.total_xp > htLastXP || pollCount >= 12) {
-            clearInterval(htPoller);
-            btn.disabled = false;
-            btn.classList.remove("trigger-anim");
-            btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
-
-            if (u.total_xp > htLastXP) {
-              const gained = u.total_xp - htLastXP;
-              statusEl.innerHTML = `<div class="trigger-status trigger-done">${lucideInline("check-circle", 15)} Berhasil! <strong>+${gained} XP</strong> diterima. Total: ${u.total_xp.toLocaleString()} XP · ${levelBadge(u.total_xp)}</div>`;
-              showToast(`+${gained} XP! Level kamu naik!`, "success");
-              htLastXP = u.total_xp;
-              loadTop3();
-            } else {
-              statusEl.innerHTML = `<div class="trigger-status trigger-waiting">${lucideInline("alert-triangle", 15)} Tidak ada respons. Pastikan sampah sudah terbuang & coba lagi.</div>`;
-            }
-          } else {
-            statusEl.innerHTML = `<div class="trigger-status trigger-active">${lucideInline("wifi", 15)} Hardware mendeteksi... (${pollCount * 5}s)</div>`;
-          }
-        } catch { /* keep polling */ }
-      }, 5000);
-    }
-
-    // ── Stats ──────────────────────────────────────────────────────
-    async function loadStats() {
+    // ══════════════════════════════════════════════════════════
+    // updateStatsInPlace — update angka statistik TANPA re-render
+    // ══════════════════════════════════════════════════════════
+    async function updateStatsInPlace() {
       try {
         const d = await apiGet("/api/stats");
-        document.getElementById("st-users").textContent = fmtNum(d.total_users);
-        document.getElementById("st-throws").textContent = fmtNum(d.total_throws);
-        document.getElementById("st-bins").textContent = fmtNum(d.total_bins);
-      } catch { /* silently fail */ }
+        const elUsers  = document.getElementById("st-users");
+        const elThrows = document.getElementById("st-throws");
+        const elBins   = document.getElementById("st-bins");
+        if (elUsers)  elUsers.textContent  = fmtNum(d.total_users);
+        if (elThrows) elThrows.textContent = fmtNum(d.total_throws);
+        if (elBins)   elBins.textContent   = fmtNum(d.total_bins);
+      } catch {
+        /* Gagal diam-diam — angka lama tetap tampil */
+      }
     }
 
+    // ══════════════════════════════════════════════════════════
+    // updateBinsInPlace — update bin card yang berubah saja
+    // ══════════════════════════════════════════════════════════
+    async function updateBinsInPlace() {
+      try {
+        const bins = await apiGet("/api/bins");
+
+        // Jika belum ada render sama sekali, lakukan render penuh
+        const wrap = document.getElementById("bins-wrap");
+        if (!wrap) return;
+
+        const existingCards = wrap.querySelectorAll("[data-bin-id]");
+        if (existingCards.length === 0 || existingCards.length !== bins.length) {
+          // Re-render penuh hanya jika jumlah bin berubah (bin baru ditambah/dihapus)
+          renderBinsFull(bins, wrap);
+          lastBinsData = bins;
+          return;
+        }
+
+        // Update per-bin — hanya elemen yang nilainya berubah
+        bins.forEach(b => {
+          const card = wrap.querySelector(`[data-bin-id="${b.bin_id}"]`);
+          if (!card) return;
+
+          const pct      = Math.round(b.capacity_pct);
+          const barColor = pct >= 80 ? "#f87171" : pct >= 50 ? "#fb923c" : "var(--emerald)";
+          const cls      = pct >= 80 ? "bin-penuh" : pct >= 50 ? "bin-sedang" : "bin-normal";
+
+          // Update capacity %
+          const capEl = card.querySelector(".bin-capacity");
+          if (capEl && capEl.textContent !== pct + "%") {
+            capEl.textContent = pct + "%";
+          }
+
+          // Update progress bar width & color
+          const barEl = card.querySelector(".rpg-bar-fill");
+          if (barEl) {
+            barEl.style.width      = pct + "%";
+            barEl.style.background = barColor;
+          }
+
+          // Update status badge
+          const badgeEl = card.querySelector(".tier-badge");
+          if (badgeEl && badgeEl.textContent.trim() !== b.status) {
+            badgeEl.outerHTML = statusBadge(b.status);
+          }
+
+          // Update class warna kartu
+          card.className = card.className.replace(/bin-(normal|sedang|penuh)/, cls);
+
+          // Update timestamp
+          const timeEl = card.querySelector(".text-muted-sm");
+          if (timeEl) timeEl.textContent = relTime(b.last_updated);
+        });
+
+        lastBinsData = bins;
+      } catch {
+        /* Gagal diam-diam — data lama tetap tampil */
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // loadBins — render penuh (pertama kali atau manual refresh)
+    // ══════════════════════════════════════════════════════════
     async function loadBins() {
       const wrap = document.getElementById("bins-wrap");
       try {
         const bins = await apiGet("/api/bins");
-        if (!bins.length) { wrap.innerHTML = `<div class="col-12"><p class="text-muted">Belum ada data bin.</p></div>`; return; }
-        wrap.innerHTML = bins.map(b => {
-          const pct = Math.round(b.capacity_pct);
-          const cls = pct >= 80 ? "bin-penuh" : pct >= 50 ? "bin-sedang" : "bin-normal";
-          const barColor = pct >= 80 ? "#f87171" : pct >= 50 ? "#fb923c" : "var(--emerald)";
-          return `
+        if (!bins.length) {
+          wrap.innerHTML = `<div class="col-12"><p class="text-muted">Belum ada data bin.</p></div>`;
+          return;
+        }
+        renderBinsFull(bins, wrap);
+        lastBinsData = bins;
+      } catch {
+        wrap.innerHTML = `
+          <div class="col-12">
+            <div class="et-alert et-alert-warn">
+              ${lucideInline("alert-triangle", 15)}
+              Tidak dapat terhubung ke server backend.
+            </div>
+          </div>`;
+      }
+    }
+
+    function renderBinsFull(bins, wrap) {
+      wrap.innerHTML = bins.map(b => {
+        const pct      = Math.round(b.capacity_pct);
+        const cls      = pct >= 80 ? "bin-penuh" : pct >= 50 ? "bin-sedang" : "bin-normal";
+        const barColor = pct >= 80 ? "#f87171" : pct >= 50 ? "#fb923c" : "var(--emerald)";
+        return `
           <div class="col-6 col-md-4 col-xl-3">
-            <div class="bin-card ${cls}">
+            <div class="bin-card ${cls}" data-bin-id="${b.bin_id}">
               <div class="d-flex justify-content-between align-items-start mb-2">
                 <div class="bin-capacity">${pct}%</div>
                 ${statusBadge(b.status)}
@@ -286,18 +349,27 @@
               <div class="text-muted-sm mt-2">${relTime(b.last_updated)}</div>
             </div>
           </div>`;
-        }).join("");
-      } catch {
-        wrap.innerHTML = `<div class="col-12">
-          <div class="et-alert et-alert-warn">${lucideInline("alert-triangle", 15)} Tidak dapat terhubung ke server backend.</div></div>`;
-      }
+      }).join("");
     }
 
+    // ══════════════════════════════════════════════════════════
+    // loadStats — pertama kali (wrapper ke updateStatsInPlace)
+    // ══════════════════════════════════════════════════════════
+    async function loadStats() {
+      await updateStatsInPlace();
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // loadTop3 — render Top 3 leaderboard
+    // ══════════════════════════════════════════════════════════
     async function loadTop3() {
       const wrap = document.getElementById("top3-wrap");
       try {
         const board = await apiGet("/api/leaderboard?limit=3");
-        if (!board.length) { wrap.innerHTML = `<div class="col-12"><p class="text-muted">Belum ada data.</p></div>`; return; }
+        if (!board.length) {
+          wrap.innerHTML = `<div class="col-12"><p class="text-muted">Belum ada data.</p></div>`;
+          return;
+        }
         wrap.innerHTML = board.map(u => `
           <div class="col-md-4">
             <div class="et-card d-flex align-items-center gap-3">
@@ -312,7 +384,99 @@
               </div>
             </div>
           </div>`).join("");
-      } catch { wrap.innerHTML = `<div class="col-12"><p class="text-muted">-</p></div>`; }
+      } catch {
+        wrap.innerHTML = `<div class="col-12"><p class="text-muted">-</p></div>`;
+      }
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // heroTrigger — Trigger Throw dari landing page
+    // ══════════════════════════════════════════════════════════
+    async function heroTrigger() {
+      const nim      = document.getElementById("ht-nim").value.trim();
+      const btn      = document.getElementById("ht-btn");
+      const statusEl = document.getElementById("ht-status");
+
+      if (!nim) {
+        showToast("Masukkan NIM kamu dulu", "error");
+        document.getElementById("ht-nim").focus();
+        return;
+      }
+
+      // Validasi user ada di database
+      try {
+        const u     = await apiGet(`/api/user/${nim}`);
+        htCurrentNIM = nim;
+        htLastXP     = u.total_xp ?? 0;
+      } catch {
+        showToast("NIM tidak ditemukan. Daftar di halaman Profil.", "error");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.classList.add("trigger-anim");
+      btn.innerHTML = `
+        <div class="et-loader" style="border-top-color:#fff;width:18px;height:18px;flex-shrink:0"></div>
+        Hardware sedang aktif...`;
+
+      statusEl.style.display = "block";
+      statusEl.innerHTML = `
+        <div class="trigger-status trigger-waiting">
+          ${lucideInline("wifi", 15)} Hardware aktif - silakan buang sampah sekarang!
+        </div>`;
+
+      // Clear poller lama
+      if (htPoller) { clearInterval(htPoller); htPoller = null; }
+
+      const nimSaat = htCurrentNIM;
+      const xpAwal  = htLastXP;
+      let pollCount = 0;
+      const MAX_POLL = 12;
+
+      htPoller = setInterval(async () => {
+        pollCount++;
+        try {
+          const u = await apiGet(`/api/user/${nimSaat}`);
+
+          if (u.total_xp > xpAwal) {
+            clearInterval(htPoller); htPoller = null;
+            btn.disabled = false;
+            btn.classList.remove("trigger-anim");
+            btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
+
+            const gained = u.total_xp - xpAwal;
+            htLastXP = u.total_xp;
+            statusEl.innerHTML = `
+              <div class="trigger-status trigger-done">
+                ${lucideInline("check-circle", 15)}
+                Berhasil! <strong>+${gained} XP</strong> diterima.
+                Total: ${u.total_xp.toLocaleString()} XP · ${levelBadge(u.total_xp)}
+              </div>`;
+            showToast(`+${gained} XP! Level kamu naik!`, "success");
+
+            // Update Top 3 setelah throw berhasil — TANPA reload halaman
+            loadTop3();
+            updateStatsInPlace();
+
+          } else if (pollCount >= MAX_POLL) {
+            clearInterval(htPoller); htPoller = null;
+            btn.disabled = false;
+            btn.classList.remove("trigger-anim");
+            btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
+            statusEl.innerHTML = `
+              <div class="trigger-status trigger-waiting">
+                ${lucideInline("alert-triangle", 15)}
+                Tidak ada respons dalam 60 detik. Pastikan sampah sudah terbuang & coba lagi.
+              </div>`;
+          } else {
+            statusEl.innerHTML = `
+              <div class="trigger-status trigger-active">
+                ${lucideInline("wifi", 15)}
+                Hardware mendeteksi... (${pollCount * 5}s / ${MAX_POLL * 5}s)
+              </div>`;
+          }
+        } catch { /* Tetap polling walau ada error jaringan sementara */ }
+      }, 5000);
     }
   </script>
 

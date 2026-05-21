@@ -39,7 +39,7 @@ function buildNavbar() {
     </a>`).join("");
 
   return `
-<nav class="et-navbar">
+<nav class="et-navbar" style="padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)">
   <div class="container" style="max-width:1140px">
     <div class="d-flex align-items-center justify-content-between py-2">
       <a href="${ROOT}index.html" class="et-brand" style="text-decoration:none">
@@ -84,7 +84,7 @@ function buildMobileNav() {
   const curPage = window.location.pathname.split("/").pop() || "index.html";
   const isActive = (page) => curPage === page ? "active" : "";
   return `
-<nav class="mob-nav" id="mob-nav">
+<nav class="mob-nav" id="mob-nav" style="padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)">
   <a href="${ROOT}index.html" class="mob-nav-item ${isActive("index.html")}">
     ${lucideInline("home", 20)}<span>Beranda</span>
   </a>

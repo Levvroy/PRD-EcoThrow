@@ -1,60 +1,547 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Profil - EcoThrow</title>
   <meta name="description" content="Profil pengguna EcoThrow - lihat XP, tier, streak, dan riwayat aktivitas.">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+
   <style>
-    .profile-hero {
-      background: linear-gradient(135deg, var(--emerald-pale) 0%, #fff 70%);
-      border: 1.5px solid var(--emerald-light);
-      border-radius: var(--radius-lg);
-      padding: 2rem;
+    /* ── TIER GRADIENT PALETTES ────────────────────────────────────
+       Setiap tier punya gradient dark-card unik.
+       Warna UI (tombol, badge, link) TETAP emerald — konsisten.
+    ────────────────────────────────────────────────────────────── */
+    :root {
+      --card-radius: 20px;
+      --tier-copper-a:    #1a0f08;
+      --tier-copper-b:    #3d1f0d;
+      --tier-copper-c:    #7c3d1a;
+      --tier-bronze-a:    #150e06;
+      --tier-bronze-b:    #3b2208;
+      --tier-bronze-c:    #8b5a2b;
+      --tier-silver-a:    #0d1117;
+      --tier-silver-b:    #1e2530;
+      --tier-silver-c:    #4a5568;
+      --tier-gold-a:      #120d00;
+      --tier-gold-b:      #2d2000;
+      --tier-gold-c:      #b8860b;
+      --tier-platinum-a:  #080e12;
+      --tier-platinum-b:  #0f1e28;
+      --tier-platinum-c:  #2d6a8a;
+      --tier-diamond-a:   #060d18;
+      --tier-diamond-b:   #0d1f3c;
+      --tier-diamond-c:   #1e5bab;
+      --tier-mithril-a:   #06100d;
+      --tier-mithril-b:   #0d2820;
+      --tier-mithril-c:   #0f7b5a;
+      --tier-orichalcum-a:#0a0812;
+      --tier-orichalcum-b:#1a0f2e;
+      --tier-orichalcum-c:#6b21a8;
+      --tier-adamantium-a:#040a07;
+      --tier-adamantium-b:#061a10;
+      --tier-adamantium-c:#10b981;
     }
 
-    .tier-ring {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      border: 3px solid var(--emerald);
-      background: var(--emerald-pale);
-      display: flex;
+    body { font-family: 'DM Sans', sans-serif; }
+
+    /* ── SEARCH CARD ──────────────────────────────────────────── */
+    .et-search-card {
+      background: rgba(255,255,255,.72);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,.9);
+      border-radius: var(--card-radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── PROFILE WRAPPER — posisi relatif agar blob bisa absolut ── */
+    .profile-card-wrap {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── MESH BLOB — gradient warna tier di belakang glass ──────── */
+    /* Blob ini yang membuat frost punya sesuatu untuk diblur       */
+    .profile-blob {
+      position: absolute;
+      inset: 0;              /* tidak menonjol keluar parent */
+      z-index: 0;
+      border-radius: 20px;   /* match card-radius */
+      filter: blur(24px);    /* dikurangi dari 32px agar tidak meluap */
+      opacity: .78;
+      transition: background .5s ease;
+      pointer-events: none;
+      overflow: hidden;      /* clip blur di dalam blob sendiri */
+    }
+
+    /* ── GLASS CARD ──────────────────────────────────────────── */
+    .profile-card {
+      position: relative;
+      z-index: 1;
+      border-radius: var(--card-radius);
+      overflow: hidden;
+      /* Glass surface */
+      background: rgba(255,255,255,.18);
+      backdrop-filter: blur(28px) saturate(1.6);
+      -webkit-backdrop-filter: blur(28px) saturate(1.6);
+      border: 1px solid rgba(255,255,255,.55);
+      box-shadow:
+        0 2px 0 0 rgba(255,255,255,.7) inset,   /* top highlight */
+        0 1px 24px rgba(0,0,0,.1),
+        0 8px 40px rgba(0,0,0,.08);
+      animation: card-rise .45s cubic-bezier(.4,0,.2,1) both;
+    }
+
+    /* Thin prismatic top edge */
+    .profile-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(255,255,255,.9) 40%,
+        rgba(255,255,255,.5) 60%,
+        transparent 100%);
+      z-index: 2;
+    }
+
+    .profile-card-inner {
+      position: relative;
+      z-index: 3;
+      padding: 2rem 2rem 1.75rem;
+    }
+
+    /* ── WATERMARK ROMAWI — pojok kanan bawah ────────────────── */
+    .tier-watermark {
+      position: absolute;
+      bottom: 1.25rem;
+      right: 1.75rem;
+      font-family: 'Libre Baskerville', serif;
+      font-style: italic;
+      font-weight: 700;
+      font-size: 4.5rem;
+      line-height: 1;
+      color: rgba(255,255,255,.12);
+      letter-spacing: -.04em;
+      pointer-events: none;
+      user-select: none;
+      z-index: 2;
+      transition: color .5s ease;
+    }
+
+    /* ── NAME & META ──────────────────────────────────────────── */
+    .profile-name {
+      font-family: 'Libre Baskerville', serif;
+      font-style: italic;
+      font-weight: 700;
+      font-size: 1.6rem;
+      line-height: 1.15;
+      color: rgba(10,30,20,.9);
+      margin: 0 0 4px;
+      text-shadow: 0 1px 2px rgba(255,255,255,.4);
+    }
+
+    .profile-meta {
+      font-size: .78rem;
+      font-weight: 400;
+      color: rgba(10,30,20,.55);
+      letter-spacing: .02em;
+    }
+
+    /* ── TIER BADGE ───────────────────────────────────────────── */
+    .tier-badge-premium {
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      font-size: 2rem;
+      gap: 5px;
+      background: rgba(255,255,255,.3);
+      border: 1px solid rgba(255,255,255,.6);
+      border-radius: 100px;
+      padding: 3px 10px;
+      font-size: .68rem;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(10,30,20,.7);
+      margin-top: 6px;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    .tier-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #059669;
       flex-shrink: 0;
     }
 
-    .event-row {
+    /* ── STAT PILLS ───────────────────────────────────────────── */
+    .profile-stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .75rem;
+      margin-top: 1.5rem;
+    }
+
+    .profile-stat-pill {
+      background: rgba(255,255,255,.22);
+      border: 1px solid rgba(255,255,255,.5);
+      border-radius: 14px;
+      padding: .9rem 1rem;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .profile-stat-num {
+      font-family: 'Libre Baskerville', serif;
+      font-style: italic;
+      font-size: 1.65rem;
+      font-weight: 700;
+      color: rgba(10,30,20,.9);
+      line-height: 1;
+      margin-bottom: 4px;
+      text-shadow: 0 1px 2px rgba(255,255,255,.5);
+    }
+
+    .profile-stat-label {
+      font-size: .62rem;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(10,30,20,.45);
+    }
+
+    /* ── XP PROGRESS BAR — thin glass line ───────────────────── */
+    .xp-progress-wrap {
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid rgba(255,255,255,.35);
+    }
+
+    .xp-progress-labels {
       display: flex;
       justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: .5rem;
+    }
+
+    .xp-current {
+      font-family: 'Libre Baskerville', serif;
+      font-style: italic;
+      font-size: 1rem;
+      font-weight: 700;
+      color: rgba(10,30,20,.85);
+    }
+
+    .xp-goal {
+      font-size: .7rem;
+      font-weight: 500;
+      color: rgba(10,30,20,.45);
+      letter-spacing: .05em;
+    }
+
+    .xp-bar-track {
+      height: 3px;
+      background: rgba(255,255,255,.3);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .xp-bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      background: linear-gradient(90deg, #059669, #10b981, #34d399);
+      position: relative;
+      transition: width .65s cubic-bezier(.4,0,.2,1);
+    }
+
+    .xp-bar-fill::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0; left: -100%; width: 55%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent);
+      animation: bar-shimmer 2.8s ease-in-out infinite;
+    }
+    @keyframes bar-shimmer { 0%{left:-100%} 100%{left:220%} }
+
+    .xp-tier-next {
+      font-size: .68rem;
+      color: rgba(10,30,20,.38);
+      margin-top: .4rem;
+      letter-spacing: .03em;
+    }
+
+    /* ── ACTIVITY SECTION ─────────────────────────────────────── */
+    .activity-section {
+      background: rgba(255,255,255,.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.9);
+      border-radius: var(--card-radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      animation: card-rise .45s .08s cubic-bezier(.4,0,.2,1) both;
+    }
+
+    .activity-section-title {
+      font-size: .62rem;
+      font-weight: 600;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: #9ca3af;
+      margin-bottom: 1.1rem;
+      display: flex;
       align-items: center;
-      padding: .65rem 0;
-      border-bottom: 1px solid var(--slate-100);
+      gap: .5rem;
+    }
+    .activity-section-title::after { content:''; flex:1; height:1px; background:#f0f0f0; }
+
+    .event-row {
+      display: flex;
+      align-items: center;
+      gap: .9rem;
+      padding: .6rem 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .event-row:last-of-type { border-bottom: none; }
+
+    .event-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .event-dot.verified   { background: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,.14); }
+    .event-dot.unverified { background: #d1d5db; }
+
+    .event-info  { flex: 1; min-width: 0; }
+    .event-label { font-size: .82rem; font-weight: 500; color: #1f2937; }
+    .event-time  { font-size: .7rem; color: #9ca3af; margin-top: 1px; }
+
+    .event-xp {
+      font-family: 'Libre Baskerville', serif;
+      font-style: italic;
+      font-size: .95rem;
+      font-weight: 700;
+      color: #059669;
+      flex-shrink: 0;
     }
 
-    .event-row:last-child {
-      border-bottom: none;
+    /* ── TRIGGER CARD ─────────────────────────────────────────── */
+    .trigger-card {
+      background: rgba(255,255,255,.82);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.9);
+      border-radius: var(--card-radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
     }
 
-    .trigger-anim {
-      animation: tpulse 1.5s ease-in-out infinite;
+    .trigger-btn-premium {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      padding: .9rem 1.5rem;
+      background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+      border: none;
+      border-radius: 14px;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: .9rem;
+      font-weight: 600;
+      letter-spacing: .02em;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(16,185,129,.3);
+      transition: all .2s ease;
     }
-
+    .trigger-btn-premium:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(16,185,129,.4);
+    }
+    .trigger-btn-premium:disabled { opacity: .7; cursor: not-allowed; }
+    .trigger-anim { animation: tpulse 1.5s ease-in-out infinite; }
     @keyframes tpulse {
+      0%,100% { box-shadow: 0 4px 16px rgba(16,185,129,.3); }
+      50%      { box-shadow: 0 8px 32px rgba(16,185,129,.6); }
+    }
 
-      0%,
-      100% {
-        box-shadow: 0 4px 14px rgba(16, 185, 129, .3);
-      }
+    /* ── REGISTER CARD ────────────────────────────────────────── */
+    .register-card {
+      background: rgba(255,255,255,.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,.9);
+      border-radius: var(--card-radius);
+      padding: 1.75rem;
+    }
 
-      50% {
-        box-shadow: 0 4px 28px rgba(16, 185, 129, .6);
-      }
+    .reg-section-label {
+      font-size: .62rem;
+      font-weight: 600;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: #9ca3af;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .reg-section-label::after { content:''; flex:1; height:1px; background:#f0f0f0; }
+
+    /* ── QR CARD ──────────────────────────────────────────────── */
+    .qr-card {
+      background: rgba(255,255,255,.9);
+      border: 1px solid #a7f3d0;
+      border-radius: var(--card-radius);
+      padding: 2rem;
+      text-align: center;
+      margin-top: 1.5rem;
+    }
+    .qr-code-box {
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+      border: 1.5px dashed #10b981;
+      border-radius: 12px;
+      padding: 1.25rem;
+      color: #065f46;
+      margin: .75rem 0;
+    }
+
+    /* ── ANIMATIONS ───────────────────────────────────────────── */
+    @keyframes card-rise {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── SKELETON ─────────────────────────────────────────────── */
+    .skel {
+      background: linear-gradient(90deg, rgba(255,255,255,.5) 25%, rgba(255,255,255,.8) 50%, rgba(255,255,255,.5) 75%);
+      background-size: 200% 100%;
+      animation: skel-wave 1.4s infinite;
+      border-radius: 8px;
+    }
+    @keyframes skel-wave { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    /* ── STATUS PILLS ─────────────────────────────────────────── */
+    .status-pill {
+      display: flex; align-items: center; gap: .5rem;
+      padding: .65rem 1rem; border-radius: 12px;
+      font-size: .82rem; font-weight: 500; margin-top: .75rem;
+    }
+    .status-waiting { background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+    .status-active  { background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; }
+    .status-done    { background:#ecfdf5; color:#065f46; border:1px solid #6ee7b7; }
+    .status-pulse   { width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;animation:dot-pulse .9s ease-in-out infinite; }
+    @keyframes dot-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(.65)} }
+
+    /* ── DIVIDER ──────────────────────────────────────────────── */
+    .section-divider { border:none;border-top:1px solid rgba(0,0,0,.06);margin:1.75rem 0; }
+
+    @media (max-width: 500px) {
+      .profile-card-inner  { padding: 1.5rem 1.25rem 1.25rem; }
+      .tier-watermark      { font-size: 3.5rem; bottom: 1rem; right: 1.25rem; }
+      .profile-stats-row   { gap: .5rem; }
+      .profile-stat-num    { font-size: 1.35rem; }
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       FIX A — Horizontal scroll + artefak "bingkai" di card profil
+
+       SEBAB ARTEFAK: margin:-4px + padding:4px di .profile-card-wrap
+       menciptakan area yang menonjol keluar container → tampak sebagai
+       kotak putih/abu di pinggir card.
+
+       SEBAB HORIZONTAL SCROLL: .profile-blob punya inset:-24px
+       yang menonjol keluar parent + filter:blur memperluas area render.
+
+       SOLUSI BERSIH:
+       - Hapus margin/padding negatif dari wrap
+       - Clip blob langsung di card (bukan di wrap) dengan overflow:hidden
+         tapi hanya untuk blob, bukan untuk card itu sendiri
+       - Gunakan clip-path di wrap agar box-shadow card tetap tampil
+       - Kunci overflow-x di html+body sebagai safety net
+    ══════════════════════════════════════════════════════════════ */
+
+    /* Wrapper: cukup position:relative, TANPA margin/padding negatif
+       yang menyebabkan area menonjol keluar container */
+    .profile-card-wrap {
+      position: relative;
+      overflow: visible;    /* biarkan box-shadow card tampil */
+      margin: 0 0 1.5rem 0; /* FIX: tambah margin-bottom agar ada jarak ke card bawah */
+      padding: 0;
+    }
+
+    /* Blob: tetap inset:0, radius match dengan card, filter blur
+       cukup untuk menciptakan glow tanpa keluar batas */
+    .profile-blob {
+      position: absolute;
+      inset: 0 !important;
+      z-index: 0;
+      border-radius: 20px;     /* match --card-radius */
+      filter: blur(24px);      /* sedikit dikurangi agar tidak meluap */
+      opacity: .75;
+      pointer-events: none;
+      contain: layout paint;
+      overflow: hidden;         /* clip blur di dalam blob sendiri */
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       FIX B — Navbar ikut scroll
+       ROOT CAUSE SEBENARNYA: contain:layout pada card memutus
+       scroll container chain yang dibutuhkan position:sticky.
+       Dan sticky navbar memang sulit reliable saat ada backdrop-filter.
+
+       SOLUSI FINAL: Ganti et-navbar dari sticky → fixed.
+       Fixed selalu bekerja terlepas dari backdrop-filter, contain,
+       atau compositing layer apapun di dalam halaman.
+       Kompensasi: tambah padding-top ke body/main agar konten
+       tidak tertutup navbar yang kini fixed.
+    ══════════════════════════════════════════════════════════════ */
+
+    /* Override navbar dari sticky ke fixed KHUSUS di profile.html */
+    .et-navbar {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      transform: none !important;
+      will-change: auto !important;
+      isolation: auto !important;
+      z-index: 1000 !important;
+    }
+
+    /* Mob-nav: pastikan fixed bersih */
+    .mob-nav {
+      transform: none !important;
+      will-change: auto !important;
+      isolation: auto !important;
+    }
+
+    /* Kompensasi tinggi navbar fixed (~60px) + sedikit breathing room */
+    main {
+      padding-top: 4.5rem !important;
+    }
+
+    /* Kunci horizontal scroll */
+    html, body {
+      overflow-x: hidden;
+      max-width: 100vw;
+    }
+
+    /* HAPUS contain:layout dari card — itu yang memutus sticky.
+       Card tidak perlu contain apapun karena sudah ada overflow-x:hidden di body */
+    .et-search-card,
+    .activity-section,
+    .trigger-card,
+    .register-card {
+      contain: none;
     }
   </style>
 </head>
@@ -63,78 +550,77 @@
   <script src="../js/api.js"></script>
   <script src="../js/navbar.js"></script>
 
-  <main style="padding:2.5rem 0 4rem">
-    <div class="container" style="max-width:720px">
+  <main style="padding:2.5rem 0 calc(6rem + env(safe-area-inset-bottom, 0px))">
+    <div class="container" style="max-width:680px">
 
-      <div class="et-card mb-4">
-        <div class="et-card-title" id="lbl-search">Cari Profil Pengguna</div>
+      <!-- ── Search ─────────────────────────────────────────────── -->
+      <div class="et-search-card">
+        <div style="font-size:.68rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#9ca3af;margin-bottom:.9rem" id="lbl-search">Cari Profil</div>
         <div class="d-flex gap-2">
-          <input id="nim-input" class="et-input" placeholder="Masukkan NIM kamu…" style="flex:1">
-          <button class="btn-emerald" onclick="loadProfile()">Cari</button>
+          <input id="nim-input" class="et-input"
+                 placeholder="Masukkan NIM kamu..."
+                 style="flex:1;margin-bottom:0"
+                 type="tel" inputmode="numeric" autocomplete="off">
+          <button type="button" class="btn-emerald" onclick="loadProfile()" style="flex-shrink:0">Cari</button>
         </div>
-        <p class="text-muted-sm mt-2">Belum terdaftar?
-          <a href="#register-section" style="color:var(--emerald);font-weight:600">Daftar di sini</a>
+        <p style="font-size:.78rem;color:#9ca3af;margin:.6rem 0 0">Belum terdaftar?
+          <a href="#register-section" style="color:var(--emerald, #10b981);font-weight:600">Daftar di sini</a>
         </p>
       </div>
 
+      <!-- ── Profile Result ─────────────────────────────────────── -->
       <div id="profile-result"></div>
 
-      <div id="trigger-section" style="display:none" class="mb-4">
-        <div class="et-card">
-          <div class="et-card-title" id="lbl-trigger">Trigger Buang Sampah</div>
-          <p style="font-size:.875rem;color:var(--slate-500);margin-bottom:1.25rem">
-            Klik tombol di bawah untuk memberi sinyal ke hardware bahwa kamu siap membuang sampah.
-            Hardware akan aktif, menghitung, lalu poin masuk otomatis ke akunmu.
+      <!-- ── Trigger Section ────────────────────────────────────── -->
+      <div id="trigger-section" style="display:none">
+        <div class="trigger-card">
+          <div style="font-size:.68rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#9ca3af;margin-bottom:.75rem" id="lbl-trigger">Trigger Buang Sampah</div>
+          <p style="font-size:.825rem;color:#6b7280;margin-bottom:1rem;line-height:1.5">
+            Tekan tombol, lalu buang sampah. Hardware aktif otomatis — XP masuk setelah terdeteksi.
           </p>
-          <button class="trigger-btn" id="trigger-btn" onclick="triggerThrow()">
-            <span id="trigger-btn-icon"></span> Saya Ingin Buang Sampah
+          <button type="button" class="trigger-btn-premium" id="trigger-btn" onclick="triggerThrow()">
+            <span id="trigger-btn-icon"></span>
+            <span id="trigger-btn-text">Buang Sekarang</span>
           </button>
-          <div id="trigger-status" class="mt-3" style="display:none"></div>
+          <div id="trigger-status"></div>
         </div>
       </div>
 
-      <hr class="et-divider">
+      <hr class="section-divider">
 
-      <div class="et-card" id="register-section">
-        <div class="et-card-title" id="lbl-register">Daftar Pengguna Baru</div>
+      <!-- ── Register ───────────────────────────────────────────── -->
+      <div class="register-card" id="register-section">
+        <div class="reg-section-label" id="lbl-register">Daftar Pengguna Baru</div>
         <div id="reg-alert"></div>
         <div class="mb-3">
-          <label class="et-label">NIM</label>
-          <input id="reg-nim" class="et-input" placeholder="Contoh: 13525136">
+          <label class="et-label" for="reg-nim">NIM</label>
+          <input id="reg-nim" class="et-input" placeholder="Contoh: 13525136"
+                 type="tel" inputmode="numeric" autocomplete="off">
         </div>
         <div class="mb-3">
-          <label class="et-label">Nama Lengkap</label>
-          <input id="reg-name" class="et-input" placeholder="Nama sesuai KTM">
+          <label class="et-label" for="reg-name">Nama Lengkap</label>
+          <input id="reg-name" class="et-input" placeholder="Nama sesuai KTM" autocomplete="name">
         </div>
         <div class="mb-3">
-          <label class="et-label">Fakultas</label>
+          <label class="et-label" for="reg-faculty">Fakultas</label>
           <select id="reg-faculty" class="et-input et-select">
-            <option>STEI</option>
-            <option>FTMD</option>
-            <option>FTTM</option>
-            <option>FTI</option>
-            <option>FMIPA</option>
-            <option>SAPPK</option>
-            <option>FSRD</option>
-            <option>SBM</option>
-            <option>SF</option>
+            <option>STEI</option><option>FTMD</option><option>FTTM</option>
+            <option>FTI</option><option>FMIPA</option><option>SAPPK</option>
+            <option>FSRD</option><option>SBM</option><option>SF</option>
           </select>
         </div>
-        <button class="btn-emerald w-100 justify-content-center" id="btn-register" onclick="registerUser()">
-          Daftar Sekarang
-        </button>
+        <button type="button" class="btn-emerald w-100 justify-content-center"
+                id="btn-register" onclick="registerUser()">Daftar Sekarang</button>
       </div>
 
-      <div id="qr-result" class="et-card mt-4 text-center" style="display:none">
-        <div id="qr-check-icon" style="color:var(--emerald);margin-bottom:.75rem"></div>
-        <p style="font-size:1.1rem;font-weight:700">Pendaftaran Berhasil!</p>
-        <p class="text-muted-sm mb-3">Kode QR gelang kamu:</p>
-        <div id="qr-code-display" style="font-size:1.1rem;font-weight:700;letter-spacing:3px;
-          background:var(--emerald-pale);border:2px dashed var(--emerald);
-          border-radius:var(--radius);padding:1rem;color:var(--emerald-dark)"></div>
-        <p class="text-muted-sm mt-2" style="font-size:.78rem">Screenshot atau catat kode ini. Tempelkan ke
-          gelang/lanyard.</p>
-        <button class="btn-ghost mt-3" id="btn-print" onclick="printQR()">Cetak QR</button>
+      <!-- ── QR Result ──────────────────────────────────────────── -->
+      <div id="qr-result" class="qr-card" style="display:none">
+        <div id="qr-check-icon" style="color:#10b981;margin-bottom:.75rem"></div>
+        <p style="font-size:1rem;font-weight:700;color:#1f2937;margin-bottom:.25rem">Pendaftaran Berhasil</p>
+        <p style="font-size:.78rem;color:#9ca3af;margin-bottom:.5rem">Kode QR gelang kamu:</p>
+        <div id="qr-code-display" class="qr-code-box"></div>
+        <p style="font-size:.72rem;color:#9ca3af;margin-top:.5rem">Screenshot kode ini dan tempelkan ke gelang / lanyard.</p>
+        <button type="button" class="btn-ghost mt-3" id="btn-print" onclick="printQR()">Cetak QR</button>
       </div>
 
     </div>
@@ -143,220 +629,354 @@
   <div id="toast-container"></div>
 
   <script>
-    let currentNIM = null;
-    let triggerPoller = null;
-    let lastXP = 0;
+    var currentNIM    = null;
+    var triggerPoller = null;
+    var lastXP        = 0;
 
-    document.addEventListener("DOMContentLoaded", () => {
-      document.getElementById("lbl-search").innerHTML = lucideInline("search", 15) + " Cari Profil Pengguna";
-      document.getElementById("lbl-trigger").innerHTML = lucideInline("wifi", 15) + " Trigger Buang Sampah";
-      document.getElementById("lbl-register").innerHTML = lucideInline("user", 15) + " Daftar Pengguna Baru";
-      document.getElementById("trigger-btn-icon").innerHTML = lucideInline("zap", 20);
-      document.getElementById("btn-register").innerHTML = lucideInline("check-circle", 16) + " Daftar Sekarang";
-      document.getElementById("btn-print").innerHTML = lucideInline("download", 14) + " Cetak QR";
-      document.getElementById("qr-check-icon").innerHTML = lucideInline("check-circle", 40);
+    /* ── TIER DATA — roman numeral + gradient palette ───────────────
+       Urutan: terendah ke tertinggi
+    ─────────────────────────────────────────────────────────────── */
+    var TIERS_PREMIUM = [
+      { name: "Copper",     roman: "I",    gA: "#1a0f08", gB: "#3d1f0d", gC: "#7c3d1a", glow: "#7c3d1a" },
+      { name: "Bronze",     roman: "II",   gA: "#150e06", gB: "#3b2208", gC: "#8b5a2b", glow: "#8b5a2b" },
+      { name: "Silver",     roman: "III",  gA: "#0d1117", gB: "#1e2530", gC: "#4a5568", glow: "#6b7280" },
+      { name: "Gold",       roman: "IV",   gA: "#120d00", gB: "#2d2000", gC: "#b8860b", glow: "#d4a017" },
+      { name: "Platinum",   roman: "V",    gA: "#080e12", gB: "#0f1e28", gC: "#2d6a8a", glow: "#38bdf8" },
+      { name: "Diamond",    roman: "VI",   gA: "#060d18", gB: "#0d1f3c", gC: "#1e5bab", glow: "#60a5fa" },
+      { name: "Mithril",    roman: "VII",  gA: "#06100d", gB: "#0d2820", gC: "#0f7b5a", glow: "#10b981" },
+      { name: "Orichalcum", roman: "VIII", gA: "#0a0812", gB: "#1a0f2e", gC: "#6b21a8", glow: "#a855f7" },
+      { name: "Adamantium", roman: "IX",   gA: "#040a07", gB: "#061a10", gC: "#10b981", glow: "#34d399" }
+    ];
 
-      const inp = document.getElementById("nim-input");
-      if (inp) inp.addEventListener("keyup", e => { if (e.key === "Enter") loadProfile(); });
+    function getTierPremium(tierName) {
+      for (var i = 0; i < TIERS_PREMIUM.length; i++) {
+        if (TIERS_PREMIUM[i].name === tierName) return TIERS_PREMIUM[i];
+      }
+      return TIERS_PREMIUM[0];
+    }
 
-      // Cek URL parameter atau Memori Lokal (localStorage)
-      const params = new URLSearchParams(window.location.search);
-      const urlNim = params.get("nim");
-      const savedNim = localStorage.getItem("et_saved_nim");
-      
-      const targetNim = urlNim || savedNim;
-      if (targetNim && inp) { 
-          inp.value = targetNim; 
-          loadProfile(); 
+    /* ── escHtml — safe, tanpa regex dengan karakter quote ──────── */
+    function escHtml(str) {
+      if (!str) return "";
+      var s = String(str), out = "";
+      for (var i = 0; i < s.length; i++) {
+        var c = s.charCodeAt(i);
+        if      (c === 38) out += "&amp;";
+        else if (c === 60) out += "&lt;";
+        else if (c === 62) out += "&gt;";
+        else if (c === 34) out += "&quot;";
+        else if (c === 39) out += "&#39;";
+        else               out += s[i];
+      }
+      return out;
+    }
+
+    window.addEventListener("beforeunload", function() {
+      if (triggerPoller) clearInterval(triggerPoller);
+    });
+
+    document.addEventListener("DOMContentLoaded", function() {
+
+      function safeSet(id, html) {
+        var el = document.getElementById(id);
+        if (el) el.innerHTML = html;
+      }
+
+      safeSet("lbl-search",   lucideInline("search", 13)  + " Cari Profil");
+      safeSet("lbl-trigger",  lucideInline("wifi", 13)    + " Trigger Buang Sampah");
+      safeSet("lbl-register", lucideInline("user", 13)    + " Daftar Pengguna Baru");
+      safeSet("trigger-btn-icon", lucideInline("zap", 17));
+      safeSet("btn-register", lucideInline("check-circle",15) + " Daftar Sekarang");
+      safeSet("btn-print",    lucideInline("download", 14)    + " Cetak QR");
+      safeSet("qr-check-icon",lucideInline("check-circle",38));
+
+      var inp = document.getElementById("nim-input");
+      if (inp) {
+        inp.addEventListener("keyup", function(e) {
+          if (e.key === "Enter") loadProfile();
+        });
+      }
+
+      var params = new URLSearchParams(window.location.search);
+      var target = params.get("nim") || localStorage.getItem("et_saved_nim");
+      if (target && inp) {
+        inp.value = target;
+        setTimeout(function() { loadProfile(); }, 0);
       }
     });
 
+    /* ── loadProfile ─────────────────────────────────────────────── */
     async function loadProfile() {
-      const nim = document.getElementById("nim-input").value.trim();
-      const wrap = document.getElementById("profile-result");
-      if (!nim) { showToast("Masukkan NIM dulu", "error"); return; }
-      
-      showLoading(wrap);
-      document.getElementById("trigger-section").style.display = "none";
-      
+      var inp  = document.getElementById("nim-input");
+      var wrap = document.getElementById("profile-result");
+      var ts   = document.getElementById("trigger-section");
+      if (!inp || !wrap) return;
+
+      var nim = inp.value.trim();
+      if (!nim) { showToast("Masukkan NIM dulu", "error"); inp.focus(); return; }
+
+      if (triggerPoller) { clearInterval(triggerPoller); triggerPoller = null; }
+      if (ts) ts.style.display = "none";
+
+      /* Skeleton loading */
+      wrap.innerHTML =
+        '<div class="profile-card-wrap">'
+        + '<div class="profile-blob" style="background:radial-gradient(ellipse 80% 70% at 15% 20%,#a7f3d066 0%,transparent 65%),radial-gradient(ellipse 60% 60% at 85% 75%,#6ee7b744 0%,transparent 65%)"></div>'
+        + '<div class="profile-card">'
+        + '<div class="profile-card-inner">'
+        + '<div class="skel mb-2" style="height:26px;width:55%"></div>'
+        + '<div class="skel mb-3" style="height:14px;width:38%"></div>'
+        + '<div class="profile-stats-row">'
+        + '<div class="profile-stat-pill"><div class="skel" style="height:34px;width:70%;margin-bottom:6px"></div><div class="skel" style="height:10px;width:50%"></div></div>'
+        + '<div class="profile-stat-pill"><div class="skel" style="height:34px;width:50%;margin-bottom:6px"></div><div class="skel" style="height:10px;width:60%"></div></div>'
+        + '</div>'
+        + '<div class="xp-progress-wrap"><div class="skel" style="height:3px;width:100%"></div></div>'
+        + '</div></div></div>';
+
       try {
-        const u = await apiGet(`/api/user/${nim}`);
+        var u = await apiGet("/api/user/" + nim);
         currentNIM = nim;
-        lastXP = u.total_xp;
-        
-        // Simpan NIM ke memori browser agar tidak perlu login terus
-        localStorage.setItem("et_saved_nim", nim); 
-        
+        lastXP     = u.total_xp || 0;
+        localStorage.setItem("et_saved_nim", nim);
         renderProfile(u, wrap);
-        document.getElementById("trigger-section").style.display = "block";
-      } catch {
-        showError(wrap, `User dengan NIM <strong>${nim}</strong> tidak ditemukan. Silakan daftar di bawah.`);
+        if (ts) ts.style.display = "block";
+      } catch(err) {
+        var msg      = err && err.message ? err.message : "";
+        var notFound = msg.indexOf("not found") >= 0 || msg.indexOf("404") >= 0 || msg.indexOf("Not Found") >= 0;
+        if (notFound) {
+          showError(wrap, "NIM <strong>" + nim + "</strong> belum terdaftar. Silakan daftar di bawah.");
+        } else {
+          showError(wrap, "Tidak dapat terhubung ke server. Pastikan backend berjalan di <strong>localhost:8000</strong>.<br><small>" + msg + "</small>");
+        }
+        currentNIM = null;
       }
     }
 
-    function tierEmoji(name) {
-      const map = { "Adamantium": "👑", "Diamond": "💠", "Platinum": "💎", "Gold": "⭐", "Silver": "🪙", "Bronze": "🛡️" };
-      return map[name] || "🛡️";
-    }
-
+    /* ── renderProfile ───────────────────────────────────────────── */
     function renderProfile(u, wrap) {
-      const tier = getTier(u.total_xp);
-      const { pct, xpLeft, nextName } = getTierProgress(u.total_xp);
-      
-      const isMax = tier.name === "Adamantium"; 
+      var tier     = getTier(u.total_xp);
+      var prog     = getTierProgress(u.total_xp);
+      var tp       = getTierPremium(tier.name);
+      var isMax    = tier.name === "Adamantium";
+      var histLink = "history.html?nim=" + encodeURIComponent(u.nim);
+      var pct      = isMax ? 100 : Math.min(Math.round(prog.pct), 100);
 
-      wrap.innerHTML = `
-        <div class="profile-hero mb-4">
-          <div class="d-flex align-items-center gap-3 mb-3">
-            <div class="tier-ring">${tierEmoji(tier.name)}</div>
-            <div>
-              <h2 style="font-size:1.25rem;font-weight:700;margin-bottom:2px">${u.name}</h2>
-              <p class="text-muted-sm">${u.nim} · ${u.faculty}</p>
-              ${levelBadge(u.total_xp)}
-            </div>
-          </div>
-          <div class="mb-1" style="font-size:.8rem;font-weight:600;color:var(--slate-500)">
-            Progres ke ${nextName === "MAX" ? "Tier Tertinggi" : nextName}
-          </div>
-          <div class="rpg-bar-wrap rpg-bar-lg ${isMax ? 'rpg-bar-adamantite' : ''} mb-1">
-            <div class="rpg-bar-fill" style="width:${isMax ? 100 : pct}%"></div>
-          </div>
-          <div class="d-flex justify-content-between text-muted-sm">
-            <span>${u.total_xp.toLocaleString()} XP</span>
-            <span>${isMax ? "✨ Tier Tertinggi!" : xpLeft.toLocaleString() + " XP lagi ke " + nextName}</span>
-          </div>
-        </div>
+      /* ── HERO CARD — glass + mesh blob ──────────────────────── */
+      /* Blob: 3 titik cahaya warna tier tersebar, blur tinggi     */
+      var blobBg =
+        "radial-gradient(ellipse 80% 70% at 15% 20%, " + tp.gC + "cc 0%, transparent 65%),"
+        + "radial-gradient(ellipse 60% 60% at 85% 75%, " + tp.gB + "ee 0%, transparent 65%),"
+        + "radial-gradient(ellipse 50% 50% at 50% 50%, " + tp.gA + "88 0%, transparent 70%)";
 
-        <div class="row g-2 mb-4">
-          <div class="col-6">
-            <div class="et-stat">
-              <div class="et-stat-num">${u.total_xp.toLocaleString()}</div>
-              <div class="et-stat-label">Total XP</div>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="et-stat">
-              <div class="et-stat-num">${u.streak_days}</div>
-              <div class="et-stat-label">Streak Hari</div>
-            </div>
-          </div>
-        </div>
+      var heroHtml =
+        /* wrapper posisi relatif untuk blob + card */
+        '<div class="profile-card-wrap">'
 
-        <div class="et-card mb-4">
-          <div class="et-card-title">10 Aktivitas Terakhir</div>
-          ${u.recent_events?.length ? u.recent_events.map(e => `
-            <div class="event-row">
-              <div>
-                <div style="font-size:.875rem">
-                  <span style="color:${e.verified ? 'var(--emerald)' : 'var(--slate-400)'}">
-                    ${e.verified ? "✓" : "✗"}
-                  </span>
-                  Buang Sampah
-                </div>
-                <div class="text-muted-sm">${relTime(e.timestamp)}</div>
-              </div>
-              <strong class="text-emerald">+${e.points} XP</strong>
-            </div>`).join("") : `<p class="text-muted text-center py-2">Belum ada aktivitas.</p>`}
-          <a href="history.html?nim=${u.nim}" class="btn-ghost btn-ghost-sm mt-2 w-100 justify-content-center">
-            Lihat Semua Riwayat
-          </a>
-        </div>`;
+        /* mesh blob di belakang glass */
+        + '<div class="profile-blob" style="background:' + blobBg + '"></div>'
+
+        /* glass card */
+        + '<div class="profile-card">'
+        + '<div class="profile-card-inner">'
+
+        /* baris nama & meta — tanpa lingkaran/avatar */
+        + '<div style="padding-right:3.5rem">'   /* beri ruang untuk watermark */
+        + '<div class="profile-name">' + escHtml(u.name) + '</div>'
+        + '<div class="profile-meta" style="margin-top:3px">' + escHtml(u.nim) + ' &nbsp;&middot;&nbsp; ' + escHtml(u.faculty) + '</div>'
+        + '<div class="tier-badge-premium" style="margin-top:8px"><span class="tier-badge-dot"></span>' + escHtml(tier.name) + '</div>'
+        + '</div>'
+
+        /* angka romawi — watermark pojok kanan bawah card */
+        + '<div class="tier-watermark">' + tp.roman + '</div>'
+
+        /* stat pills */
+        + '<div class="profile-stats-row">'
+        + '<div class="profile-stat-pill">'
+        + '<div class="profile-stat-num">' + (u.total_xp || 0).toLocaleString() + '</div>'
+        + '<div class="profile-stat-label">Total XP</div>'
+        + '</div>'
+        + '<div class="profile-stat-pill">'
+        + '<div class="profile-stat-num">' + (u.streak_days || 0) + '</div>'
+        + '<div class="profile-stat-label">Streak Hari</div>'
+        + '</div>'
+        + '</div>'
+
+        /* XP progress bar */
+        + '<div class="xp-progress-wrap">'
+        + '<div class="xp-progress-labels">'
+        + '<span class="xp-current">' + (u.total_xp || 0).toLocaleString() + ' XP</span>'
+        + '<span class="xp-goal">' + (isMax ? 'Tier Tertinggi' : escHtml(prog.nextName)) + '</span>'
+        + '</div>'
+        + '<div class="xp-bar-track"><div class="xp-bar-fill" style="width:' + pct + '%"></div></div>'
+        + '<div class="xp-tier-next">'
+        + (isMax
+            ? 'Kamu telah mencapai puncak \u2014 Adamantium'
+            : (prog.xpLeft || 0).toLocaleString() + ' XP lagi menuju ' + escHtml(prog.nextName))
+        + '</div>'
+        + '</div>'
+
+        + '</div>'   /* /profile-card-inner */
+        + '</div>'   /* /profile-card */
+        + '</div>';  /* /profile-card-wrap */
+
+      /* ── ACTIVITY SECTION ────────────────────────────────────── */
+      var eventsHtml = "";
+      if (u.recent_events && u.recent_events.length > 0) {
+        for (var i = 0; i < u.recent_events.length; i++) {
+          var ev = u.recent_events[i];
+          eventsHtml +=
+            '<div class="event-row">'
+            + '<div class="event-dot ' + (ev.verified ? "verified" : "unverified") + '"></div>'
+            + '<div class="event-info">'
+            + '<div class="event-label">Buang Sampah</div>'
+            + '<div class="event-time">' + relTime(ev.timestamp) + '</div>'
+            + '</div>'
+            + '<div class="event-xp">+' + (ev.points || 0) + ' XP</div>'
+            + '</div>';
+        }
+      } else {
+        eventsHtml = '<p style="font-size:.82rem;color:#9ca3af;text-align:center;padding:1rem 0">Belum ada aktivitas tercatat.</p>';
+      }
+
+      var activityHtml =
+        '<div class="activity-section">'
+        + '<div class="activity-section-title">' + lucideInline("clock", 12) + ' Aktivitas Terakhir</div>'
+        + eventsHtml
+        + '<a href="' + histLink + '" style="display:flex;align-items:center;justify-content:center;gap:.35rem;'
+        + 'margin-top:.75rem;font-size:.78rem;font-weight:600;color:#059669;text-decoration:none;letter-spacing:.02em">'
+        + 'Lihat semua riwayat ' + lucideInline("arrow-right", 13)
+        + '</a>'
+        + '</div>';
+
+      wrap.innerHTML = heroHtml + activityHtml;
     }
 
+    /* ── triggerThrow ────────────────────────────────────────────── */
     function triggerThrow() {
       if (!currentNIM) { showToast("Cari profil dulu", "error"); return; }
-      const btn = document.getElementById("trigger-btn");
-      const statusEl = document.getElementById("trigger-status");
+
+      var btn      = document.getElementById("trigger-btn");
+      var btnText  = document.getElementById("trigger-btn-text");
+      var statusEl = document.getElementById("trigger-status");
+      if (!btn || !statusEl) return;
+
+      if (triggerPoller) { clearInterval(triggerPoller); triggerPoller = null; }
 
       btn.disabled = true;
       btn.classList.add("trigger-anim");
-      btn.innerHTML = `<div class="et-loader" style="border-top-color:#fff;width:18px;height:18px;flex-shrink:0"></div> Menunggu hardware...`;
+      if (btnText) btnText.textContent = "Hardware aktif...";
 
-      statusEl.style.display = "block";
-      statusEl.innerHTML = `
-        <div class="trigger-status trigger-waiting">
-          Hardware sedang mendeteksi kamu. Silakan buang sampah sekarang...
-        </div>`;
+      statusEl.innerHTML =
+        '<div class="status-pill status-active">'
+        + '<span class="status-pulse"></span>'
+        + lucideInline("wifi", 14)
+        + ' Hardware mendeteksi — silakan buang sampah sekarang'
+        + '</div>';
 
-      let pollCount = 0;
-      if (triggerPoller) clearInterval(triggerPoller);
+      var nimSaat   = currentNIM;
+      var xpAwal    = lastXP;
+      var pollCount = 0;
+      var MAX_POLL  = 12;
 
-      triggerPoller = setInterval(async () => {
+      triggerPoller = setInterval(async function() {
         pollCount++;
         try {
-          const u = await apiGet(`/api/user/${currentNIM}`);
-          if (u.total_xp > lastXP || pollCount >= 12) {
-            clearInterval(triggerPoller);
+          var u = await apiGet("/api/user/" + nimSaat);
+
+          if (u.total_xp > xpAwal) {
+            clearInterval(triggerPoller); triggerPoller = null;
             btn.disabled = false;
             btn.classList.remove("trigger-anim");
-            btn.innerHTML = `<span id="trigger-btn-icon">${lucideInline("zap", 20)}</span> Saya Ingin Buang Sampah`;
+            if (btnText) btnText.textContent = "Buang Sekarang";
 
-            if (u.total_xp > lastXP) {
-              const gained = u.total_xp - lastXP;
-              statusEl.innerHTML = `
-                <div class="trigger-status trigger-done">
-                  ✓ Berhasil! +${gained} XP diterima. Total: ${u.total_xp.toLocaleString()} XP.
-                </div>`;
-              showToast(`+${gained} XP diterima!`, "success");
-              lastXP = u.total_xp;
-              const wrap = document.getElementById("profile-result");
-              renderProfile(u, wrap);
-            } else {
-              statusEl.innerHTML = `
-                <div class="trigger-status trigger-waiting">
-                  Tidak ada respons dari hardware. Pastikan sampah terbuang & coba lagi.
-                </div>`;
-            }
+            var gained = u.total_xp - xpAwal;
+            lastXP = u.total_xp;
+
+            statusEl.innerHTML =
+              '<div class="status-pill status-done">'
+              + lucideInline("check-circle", 14)
+              + ' +' + gained + ' XP diterima &mdash; Total: ' + u.total_xp.toLocaleString() + ' XP'
+              + '</div>';
+            showToast("+" + gained + " XP diterima!", "success");
+            renderProfile(u, document.getElementById("profile-result"));
+
+          } else if (pollCount >= MAX_POLL) {
+            clearInterval(triggerPoller); triggerPoller = null;
+            btn.disabled = false;
+            btn.classList.remove("trigger-anim");
+            if (btnText) btnText.textContent = "Buang Sekarang";
+            statusEl.innerHTML =
+              '<div class="status-pill status-waiting">'
+              + lucideInline("alert-triangle", 14)
+              + ' Tidak ada respons dalam 60 detik. Pastikan sampah terbuang lalu coba lagi.'
+              + '</div>';
           } else {
-            statusEl.innerHTML = `
-              <div class="trigger-status trigger-active">
-                Hardware aktif - menunggu konfirmasi (${pollCount * 5}s)...
-              </div>`;
+            statusEl.innerHTML =
+              '<div class="status-pill status-active">'
+              + '<span class="status-pulse"></span>'
+              + ' Menunggu konfirmasi hardware (' + (pollCount * 5) + 's)...'
+              + '</div>';
           }
-        } catch { /* keep polling */ }
+        } catch(e) { /* tetap polling */ }
       }, 5000);
     }
 
+    /* ── registerUser ────────────────────────────────────────────── */
     async function registerUser() {
-      const nim = document.getElementById("reg-nim").value.trim();
-      const name = document.getElementById("reg-name").value.trim();
-      const fac = document.getElementById("reg-faculty").value;
-      const alertEl = document.getElementById("reg-alert");
+      var nimEl   = document.getElementById("reg-nim");
+      var nameEl  = document.getElementById("reg-name");
+      var facEl   = document.getElementById("reg-faculty");
+      var alertEl = document.getElementById("reg-alert");
+      var btn     = document.getElementById("btn-register");
+      if (!nimEl || !nameEl || !facEl || !alertEl) return;
+
+      var nim  = nimEl.value.trim();
+      var name = nameEl.value.trim();
+      var fac  = facEl.value;
       alertEl.innerHTML = "";
-      
-      if (!nim || !name) {
-        alertEl.innerHTML = `<div class="et-alert et-alert-danger">NIM dan Nama wajib diisi.</div>`; 
-        return;
+
+      if (!nim)  { alertEl.innerHTML = '<div class="et-alert et-alert-danger">NIM wajib diisi.</div>';   nimEl.focus();  return; }
+      if (!name) { alertEl.innerHTML = '<div class="et-alert et-alert-danger">Nama wajib diisi.</div>'; nameEl.focus(); return; }
+      if (!/^\d{6,12}$/.test(nim)) {
+        alertEl.innerHTML = '<div class="et-alert et-alert-danger">NIM harus angka 6-12 digit.</div>';
+        nimEl.focus(); return;
       }
-      
+
+      if (btn) { btn.disabled = true; btn.innerHTML = '<div class="et-loader" style="border-top-color:#fff;width:15px;height:15px;flex-shrink:0"></div> Mendaftarkan...'; }
+
       try {
-        const res = await apiPost("/api/user/register", { nim, name, faculty: fac });
-        
+        var res = await apiPost("/api/user/register", { nim: nim, name: name, faculty: fac });
         localStorage.setItem("et_saved_nim", nim);
-        
-        document.getElementById("qr-result").style.display = "block";
-        document.getElementById("qr-code-display").textContent = res.qr_code;
+
+        var qrResult  = document.getElementById("qr-result");
+        var qrDisplay = document.getElementById("qr-code-display");
+        if (qrResult)  qrResult.style.display = "block";
+        if (qrDisplay) qrDisplay.textContent   = res.qr_code || "N/A";
+
         showToast("Pendaftaran berhasil!", "success");
-        
-        document.getElementById("nim-input").value = nim;
-        setTimeout(loadProfile, 1500); 
-        
-      } catch (e) {
-        alertEl.innerHTML = `<div class="et-alert et-alert-danger">${e.message}</div>`;
+        var inp = document.getElementById("nim-input");
+        if (inp) inp.value = nim;
+        setTimeout(function() { loadProfile(); }, 1500);
+
+      } catch(err) {
+        var msg = err && err.message ? err.message : "Pendaftaran gagal. Coba lagi.";
+        alertEl.innerHTML = '<div class="et-alert et-alert-danger">' + lucideInline("alert-triangle", 14) + ' ' + msg + '</div>';
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = lucideInline("check-circle", 15) + " Daftar Sekarang"; }
       }
     }
 
+    /* ── printQR ─────────────────────────────────────────────────── */
     function printQR() {
-      const qr = document.getElementById("qr-code-display").textContent;
-      const w = window.open("", "_blank");
-      w.document.write(`<html><body style="text-align:center;font-family:monospace;padding:2rem">
-        <h2>EcoThrow QR Code</h2><p>Tempelkan ke gelang/lanyard</p>
-        <div style="font-size:1.8rem;font-weight:700;border:3px dashed green;padding:1rem;display:inline-block;margin:1rem">${qr}</div>
-        <script>window.print();<\/script></body></html>`);
+      var qrEl = document.getElementById("qr-code-display");
+      if (!qrEl) return;
+      var qr = qrEl.textContent;
+      var w  = window.open("", "_blank");
+      if (!w) { showToast("Izinkan pop-up untuk mencetak.", "error"); return; }
+      w.document.write("<html><head><title>EcoThrow QR<\/title><\/head><body style='text-align:center;font-family:monospace;padding:2rem'><h2>EcoThrow QR Code<\/h2><div style='font-size:1.8rem;font-weight:700;border:3px dashed #10b981;padding:1rem;display:inline-block;margin:1rem;letter-spacing:3px'>" + qr + "<\/div><\/body><\/html>");
     }
   </script>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-
 </html>
