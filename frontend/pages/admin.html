@@ -186,10 +186,13 @@
         </div>
         <div class="et-card">
           <div class="et-card-title" id="lbl-quick-throw">Quick Throw - Isi Otomatis</div>
-          <p class="text-muted-sm mb-3">Pilih pengguna & bin, data simulasi diisi otomatis</p>
+          <p class="text-muted-sm mb-3">Pilih pengguna dari daftar & bin, QR code diisi otomatis</p>
           <div class="mb-3">
-            <label class="et-label">QR Code Pengguna</label>
-            <input id="quick-qr" class="et-input" placeholder="QR code dari profil pengguna">
+            <label class="et-label">Pilih Pengguna (NIM - Nama)</label>
+            <select id="quick-user" class="et-input et-select" onchange="onQuickUserChange()">
+              <option value="">-- Pilih pengguna --</option>
+            </select>
+            <input id="quick-qr" type="hidden" value="">
           </div>
           <div class="mb-3">
             <label class="et-label">Pilih Bin</label>
@@ -325,7 +328,26 @@
             <td><strong class="text-emerald">${u.total_xp.toLocaleString()}</strong></td>
             <td><code style="font-size:.72rem;background:var(--slate-100);padding:2px 6px;border-radius:4px">${u.qr_code}</code></td>
           </tr>`).join("");
+        // FIX: Populate dropdown user di Quick Throw
+        populateUserSelect(users);
       } catch { tbody.innerHTML = `<tr><td colspan="7"><div class="et-alert et-alert-danger">Gagal memuat user.</div></td></tr>`; }
+    }
+
+    // FIX: Populate dropdown pengguna di Quick Throw
+    function populateUserSelect(users) {
+      const sel = document.getElementById("quick-user");
+      if (!sel) return;
+      sel.innerHTML = users.length
+        ? `<option value="">-- Pilih pengguna --</option>` +
+          users.map(u => `<option value="${u.qr_code}" data-name="${u.name}">${u.nim} - ${u.name}</option>`).join("")
+        : `<option value="">- Belum ada pengguna -</option>`;
+    }
+
+    // FIX: Saat user dipilih dari dropdown, simpan qr_code ke hidden input
+    function onQuickUserChange() {
+      const sel = document.getElementById("quick-user");
+      const hidden = document.getElementById("quick-qr");
+      if (hidden) hidden.value = sel.value;
     }
 
     async function simUpdateBin() {

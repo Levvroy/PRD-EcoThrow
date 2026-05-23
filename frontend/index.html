@@ -391,6 +391,10 @@
 
     // ══════════════════════════════════════════════════════════
     // heroTrigger — Trigger Throw dari landing page
+    // ALUR BENAR:
+    //   1. Validasi NIM + ambil qr_code user
+    //   2. POST /api/pending_throw  → daftarkan user ke bin
+    //   3. Polling /api/user/{nim}  → tunggu XP naik (ESP32 yg kirim /api/throw)
     // ══════════════════════════════════════════════════════════
     async function heroTrigger() {
       const nim      = document.getElementById("ht-nim").value.trim();
@@ -403,35 +407,114 @@
         return;
       }
 
-      // Validasi user ada di database
-      try {
-        const u     = await apiGet(`/api/user/${nim}`);
-        htCurrentNIM = nim;
-        htLastXP     = u.total_xp ?? 0;
-      } catch {
-        showToast("NIM tidak ditemukan. Daftar di halaman Profil.", "error");
-        return;
-      }
-
       btn.disabled = true;
       btn.classList.add("trigger-anim");
       btn.innerHTML = `
         <div class="et-loader" style="border-top-color:#fff;width:18px;height:18px;flex-shrink:0"></div>
-        Hardware sedang aktif...`;
-
+        Menghubungi server...`;
       statusEl.style.display = "block";
+      statusEl.innerHTML = `<div class="trigger-status trigger-waiting">${lucideInline("wifi", 15)} Menghubungi server...</div>`;
+
+      // Step 1 — Validasi user & ambil qr_code + bin
+      let user, bins;
+      try {
+        user = await apiGet(`/api/user/${nim}`);
+        htCurrentNIM = nim;
+        htLastXP     = user.total_xp ?? 0;
+      } catch {
+        showToast("NIM tidak ditemukan. Daftar di halaman Profil.", "error");
+        btn.disabled = false;
+        btn.classList.remove("trigger-anim");
+        btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
+        statusEl.style.display = "none";
+        return;
+      }
+
+      try {
+        bins = await apiGet("/api/bins");
+      } catch { bins = []; }
+
+      if (!bins || bins.length === 0) {
+        showToast("Tidak ada bin terdaftar. Hubungi admin.", "error");
+        btn.disabled = false;
+        btn.classList.remove("trigger-anim");
+        btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
+        statusEl.innerHTML = `<div class="trigger-status trigger-waiting">${lucideInline("alert-triangle", 15)} Tidak ada bin aktif.</div>`;
+        return;
+      }
+
+      // Pilih bin yang tidak penuh, atau bin pertama
+      const bin = bins.find(b => b.capacity_pct < 100) || bins[0];
+
+      // Step 2 — Cek dulu apakah bin sedang dipakai user lain
+      // [v1.2] Endpoint baru /api/pending_throw/status
+      let binBusy = false;
+      try {
+        const statusBin = await apiGet(`/api/pending_throw/status?bin_id=${bin.id}`);
+        if (statusBin.busy) {
+          binBusy = true;
+          const sisa = statusBin.sisa_detik;
+          btn.disabled = false;
+          btn.classList.remove("trigger-anim");
+          btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
+          statusEl.innerHTML = `
+            <div class="trigger-status trigger-waiting">
+              ${lucideInline("alert-triangle", 15)}
+              <strong>Bin sedang dipakai</strong> user lain. Tunggu sekitar <strong>${sisa} detik</strong> lalu coba lagi.
+            </div>`;
+          showToast(`Bin sedang dipakai. Tunggu ${sisa} detik.`, "error");
+          return;
+        }
+      } catch { /* Jika endpoint belum ada (server lama), lanjut saja */ }
+
+      // Step 3 — Daftarkan pending throw ke server (kirim nim juga untuk verifikasi)
+      // [v1.2] nim wajib disertakan agar backend verifikasi NIM ↔ QR code
+      try {
+        await apiPost("/api/pending_throw", {
+          user_qr_code: user.qr_code,
+          bin_id:       bin.id,
+          nim:          nim,           // v1.2: wajib
+        });
+      } catch (e) {
+        btn.disabled = false;
+        btn.classList.remove("trigger-anim");
+        btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
+        // Handle 409 Conflict (bin sedang dipakai) — bisa juga dari race condition
+        const pesanErr = e.message || "";
+        if (pesanErr.includes("sedang dipakai") || pesanErr.includes("409")) {
+          statusEl.innerHTML = `
+            <div class="trigger-status trigger-waiting">
+              ${lucideInline("alert-triangle", 15)}
+              Bin sedang dipakai user lain. Coba beberapa detik lagi.
+            </div>`;
+          showToast("Bin sedang dipakai, coba lagi sebentar.", "error");
+        } else {
+          statusEl.innerHTML = `
+            <div class="trigger-status trigger-waiting">
+              ${lucideInline("alert-triangle", 15)} Gagal: ${pesanErr}
+            </div>`;
+          showToast("Gagal daftar throw: " + pesanErr, "error");
+        }
+        return;
+      }
+
+      btn.innerHTML = `
+        <div class="et-loader" style="border-top-color:#fff;width:18px;height:18px;flex-shrink:0"></div>
+        Hardware aktif...`;
       statusEl.innerHTML = `
         <div class="trigger-status trigger-waiting">
-          ${lucideInline("wifi", 15)} Hardware aktif - silakan buang sampah sekarang!
+          ${lucideInline("wifi", 15)}
+          <strong>Hardware aktif!</strong> Berdiri di depan bin <strong>${bin.location}</strong>, lalu buang sampah.
         </div>`;
 
-      // Clear poller lama
+      // Step 4 — Polling tunggu ESP32 kirim /api/throw
+      // Website tidak kirim XP sendiri — menunggu konfirmasi dari sensor.
       if (htPoller) { clearInterval(htPoller); htPoller = null; }
 
-      const nimSaat = htCurrentNIM;
-      const xpAwal  = htLastXP;
-      let pollCount = 0;
-      const MAX_POLL = 12;
+      const nimSaat  = htCurrentNIM;
+      const xpAwal   = htLastXP;
+      let pollCount  = 0;
+      const MAX_POLL = 24; // 24 × 5 detik = 120 detik (sesuai expire pending_throw)
 
       htPoller = setInterval(async () => {
         pollCount++;
@@ -439,6 +522,7 @@
           const u = await apiGet(`/api/user/${nimSaat}`);
 
           if (u.total_xp > xpAwal) {
+            // ESP32 sudah kirim throw & XP masuk!
             clearInterval(htPoller); htPoller = null;
             btn.disabled = false;
             btn.classList.remove("trigger-anim");
@@ -452,27 +536,30 @@
                 Berhasil! <strong>+${gained} XP</strong> diterima.
                 Total: ${u.total_xp.toLocaleString()} XP · ${levelBadge(u.total_xp)}
               </div>`;
-            showToast(`+${gained} XP! Level kamu naik!`, "success");
-
-            // Update Top 3 setelah throw berhasil — TANPA reload halaman
+            showToast(`+${gained} XP! Level: ${u.level}`, "success");
             loadTop3();
             updateStatsInPlace();
+            updateBinsInPlace();
 
           } else if (pollCount >= MAX_POLL) {
+            // Timeout 120 detik
             clearInterval(htPoller); htPoller = null;
             btn.disabled = false;
             btn.classList.remove("trigger-anim");
             btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
+            // Hapus pending throw yang sudah expire
+            try { await apiFetch(`/api/pending_throw?bin_id=${bin.id}`, { method: "DELETE" }); } catch {}
             statusEl.innerHTML = `
               <div class="trigger-status trigger-waiting">
                 ${lucideInline("alert-triangle", 15)}
-                Tidak ada respons dalam 60 detik. Pastikan sampah sudah terbuang & coba lagi.
+                Timeout 120 detik. Pastikan hardware aktif & sampah sudah masuk ke bin.
               </div>`;
+
           } else {
             statusEl.innerHTML = `
               <div class="trigger-status trigger-active">
                 ${lucideInline("wifi", 15)}
-                Hardware mendeteksi... (${pollCount * 5}s / ${MAX_POLL * 5}s)
+                Sensor mendeteksi... (${pollCount * 5}s / 120s) — Bin: <strong>${bin.location}</strong>
               </div>`;
           }
         } catch { /* Tetap polling walau ada error jaringan sementara */ }
