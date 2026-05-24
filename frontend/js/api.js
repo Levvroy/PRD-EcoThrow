@@ -2,7 +2,7 @@
    EcoThrow - API Helper & Utilities
    ═══════════════════════════════════════════ */
 
-const API = "http://localhost:8000";
+const API = "http://192.168.0.109:8000";
 
 async function apiFetch(path, options = {}) {
   try {

@@ -27,7 +27,7 @@
           <span class="hero-question">Setiap sampah yang kamu buang = XP.</span>
           <p class="tagline" style="margin-top:.75rem">
             Saingi mereka di leaderboard. Buktikan kamu yang paling peduli.
-            Naik dari <strong>Bronze</strong> ke <strong style="color:var(--emerald-dark)">Adamantite</strong>
+            Naik dari <strong>Copper</strong> ke <strong style="color:var(--emerald-dark)">Adamantium</strong>
           </p>
           <div class="d-flex gap-2 flex-wrap mt-3">
             <a href="pages/leaderboard.html" class="btn-emerald">
@@ -39,6 +39,7 @@
           </div>
         </div>
         <div class="col-lg-6 d-none d-lg-flex justify-content-center">
+          <div id="hero-icon" style="color:var(--emerald);opacity:.15"></div>
         </div>
       </div>
 
@@ -52,11 +53,10 @@
         <div class="row g-2 align-items-center">
           <div class="col-12 col-sm">
             <input id="ht-nim" class="et-input" placeholder="NIM (contoh: 13525136)"
-                   style="width:100%;margin-bottom:0" type="tel" inputmode="numeric">
+                   style="width:100%;margin-bottom:0" type="tel" inputmode="numeric" autocomplete="off">
           </div>
           <div class="col-12 col-sm-auto">
             <button type="button" id="ht-btn" class="trigger-btn w-100"
-                    onclick="heroTrigger()"
                     style="width:100%;justify-content:center;padding:12px 24px">
               <span id="icon-ht-btn"></span> Buang Sampah
             </button>
@@ -101,7 +101,7 @@
             <h2 class="et-section-title" id="bins-heading">Status Tempat Sampah</h2>
             <p class="et-section-sub">Pembaruan langsung dari sensor IoT</p>
           </div>
-          <button type="button" class="btn-ghost btn-ghost-sm" onclick="loadBins()" id="btn-refresh-bins"></button>
+          <button type="button" class="btn-ghost btn-ghost-sm" id="btn-refresh-bins"></button>
         </div>
         <div id="bins-wrap" class="row g-3">
           <div class="col-12">
@@ -145,75 +145,80 @@
   <div id="toast-container"></div>
 
   <style>
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: .3; }
-    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
   </style>
 
   <script>
-    /* ══════════════════════════════════════════════════════════════
-       index.html — Main Script
-       FIX UTAMA: Polling sebelumnya mungkin memanggil location.reload()
-       di browser karena Live Server VSCode mendeteksi perubahan file
-       database (ecothrow.db) dan auto-refresh seluruh halaman.
-
-       SOLUSI DITERAPKAN:
-         1. Polling hanya update elemen DOM spesifik — TIDAK ada
-            location.reload() atau window.location.href di sini.
-         2. Tambahkan .vscode/settings.json untuk matikan Live Server
-            auto-refresh pada perubahan .db (lihat LIVE_SERVER_FIX.md).
-         3. Gunakan updateBinsInPlace() untuk update bin tanpa re-render
-            total — lebih smooth, tidak ada flicker.
-    ══════════════════════════════════════════════════════════════ */
-
-    let htPoller    = null;
-    let htLastXP    = 0;
+    // ══════════════════════════════════════════════════════════════
+    // STATE — semua variabel polling/throw disimpan di sini
+    // ══════════════════════════════════════════════════════════════
+    let htPoller     = null;
+    let htLastXP     = 0;
     let htCurrentNIM = null;
-
-    // Cache data bin terakhir untuk perbandingan diff
     let lastBinsData = null;
 
+    // ── FIX: Interval refresh data background (BUKAN reload halaman)
+    // Live Server reload terjadi karena file .db berubah → tidak bisa dicegah
+    // dari frontend. Solusi: pakai fetch biasa tanpa reload, dan pastikan
+    // interval hanya update elemen DOM, TIDAK memanggil location.reload().
+    let autoRefreshInterval = null;
+
     document.addEventListener("DOMContentLoaded", () => {
-      // ── Icons ──────────────────────────────────────────────
       document.getElementById("icon-lb").innerHTML           = lucideInline("trophy", 16);
       document.getElementById("icon-prof").innerHTML         = lucideInline("user", 16);
-      document.getElementById("hero-icon").innerHTML         = lucideInline("trash2", 64);
+      if (document.getElementById("hero-icon"))
+        document.getElementById("hero-icon").innerHTML       = lucideInline("trash2", 64);
       document.getElementById("icon-trigger-pill").innerHTML = lucideInline("zap", 11);
       document.getElementById("icon-ht-btn").innerHTML       = lucideInline("zap", 18);
       document.getElementById("lbl-st-users").innerHTML      = lucideInline("users", 13) + " Mahasiswa Terdaftar";
       document.getElementById("lbl-st-throws").innerHTML     = lucideInline("trash2", 13) + " Total Pembuangan";
       document.getElementById("lbl-st-bins").innerHTML       = lucideInline("wifi", 13) + " Bin Aktif";
       document.getElementById("bins-heading").innerHTML      = lucideInline("wifi", 18) + " Status Tempat Sampah";
-      document.getElementById("btn-refresh-bins").innerHTML  = lucideInline("refresh", 14) + " Refresh";
       document.getElementById("top3-heading").innerHTML      = lucideInline("trophy", 18) + " Top 3 Saat Ini";
       document.getElementById("btn-all-lb").innerHTML        = "Lihat semua " + lucideInline("arrow-right", 14);
       document.getElementById("btn-about").innerHTML         = lucideInline("info", 16) + " Pelajari Selengkapnya";
 
-      // ── Enter key di NIM input ─────────────────────────────
-      document.getElementById("ht-nim").addEventListener("keyup", e => {
-        if (e.key === "Enter") heroTrigger();
+      // ── FIX: Refresh button — hanya update bin cards, TIDAK reload halaman
+      const refreshBtn = document.getElementById("btn-refresh-bins");
+      refreshBtn.innerHTML = lucideInline("refresh-cw", 14) + " Refresh";
+      refreshBtn.addEventListener("click", () => {
+        refreshBtn.disabled = true;
+        refreshBtn.style.opacity = "0.5";
+        loadBins().finally(() => {
+          setTimeout(() => {
+            refreshBtn.disabled = false;
+            refreshBtn.style.opacity = "";
+          }, 1000);
+        });
       });
 
-      // ── Load data awal ─────────────────────────────────────
+      // ── FIX: Enter di input NIM langsung trigger, tidak reload form
+      document.getElementById("ht-nim").addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+          e.preventDefault(); // Cegah submit form default
+          heroTrigger();
+        }
+      });
+
       loadStats();
       loadBins();
       loadTop3();
 
-      // ── FIX POLLING UTAMA ──────────────────────────────────
-      // Setiap 30 detik, update HANYA elemen yang berubah.
-      // TIDAK ada location.reload() di sini.
-      // Jika website kamu masih auto-refresh, itu dari Live Server VSCode
-      // bukan dari kode ini. Lihat LIVE_SERVER_FIX.md untuk solusinya.
-      setInterval(() => {
-        updateStatsInPlace();   // hanya update angka, tidak re-render apapun
-        updateBinsInPlace();    // hanya update % dan status bin yang berubah
+      // ── FIX: Auto-refresh background — hanya update nilai, TIDAK reload halaman
+      // Interval 30 detik untuk stats & bins, 60 detik untuk top3
+      autoRefreshInterval = setInterval(() => {
+        updateStatsInPlace();
+        updateBinsInPlace();
       }, 30000);
+
+      setInterval(() => {
+        loadTop3();
+      }, 60000);
     });
 
-    // ══════════════════════════════════════════════════════════
-    // updateStatsInPlace — update angka statistik TANPA re-render
-    // ══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════
+    // Stats
+    // ══════════════════════════════════════════════════════════════
     async function updateStatsInPlace() {
       try {
         const d = await apiGet("/api/stats");
@@ -223,75 +228,45 @@
         if (elUsers)  elUsers.textContent  = fmtNum(d.total_users);
         if (elThrows) elThrows.textContent = fmtNum(d.total_throws);
         if (elBins)   elBins.textContent   = fmtNum(d.total_bins);
-      } catch {
-        /* Gagal diam-diam — angka lama tetap tampil */
-      }
+      } catch { /* silent fail */ }
     }
 
-    // ══════════════════════════════════════════════════════════
-    // updateBinsInPlace — update bin card yang berubah saja
-    // ══════════════════════════════════════════════════════════
+    async function loadStats() { await updateStatsInPlace(); }
+
+    // ══════════════════════════════════════════════════════════════
+    // Bins — update in-place, TIDAK re-render seluruh DOM jika card sudah ada
+    // ══════════════════════════════════════════════════════════════
     async function updateBinsInPlace() {
       try {
         const bins = await apiGet("/api/bins");
-
-        // Jika belum ada render sama sekali, lakukan render penuh
         const wrap = document.getElementById("bins-wrap");
         if (!wrap) return;
-
         const existingCards = wrap.querySelectorAll("[data-bin-id]");
         if (existingCards.length === 0 || existingCards.length !== bins.length) {
-          // Re-render penuh hanya jika jumlah bin berubah (bin baru ditambah/dihapus)
           renderBinsFull(bins, wrap);
           lastBinsData = bins;
           return;
         }
-
-        // Update per-bin — hanya elemen yang nilainya berubah
         bins.forEach(b => {
-          const card = wrap.querySelector(`[data-bin-id="${b.bin_id}"]`);
+          const card = wrap.querySelector(`[data-bin-id="${b.id}"]`);
           if (!card) return;
-
           const pct      = Math.round(b.capacity_pct);
           const barColor = pct >= 80 ? "#f87171" : pct >= 50 ? "#fb923c" : "var(--emerald)";
           const cls      = pct >= 80 ? "bin-penuh" : pct >= 50 ? "bin-sedang" : "bin-normal";
-
-          // Update capacity %
-          const capEl = card.querySelector(".bin-capacity");
-          if (capEl && capEl.textContent !== pct + "%") {
-            capEl.textContent = pct + "%";
-          }
-
-          // Update progress bar width & color
+          const capEl    = card.querySelector(".bin-capacity");
+          if (capEl && capEl.textContent !== pct + "%") capEl.textContent = pct + "%";
           const barEl = card.querySelector(".rpg-bar-fill");
-          if (barEl) {
-            barEl.style.width      = pct + "%";
-            barEl.style.background = barColor;
-          }
-
-          // Update status badge
+          if (barEl) { barEl.style.width = pct + "%"; barEl.style.background = barColor; }
           const badgeEl = card.querySelector(".tier-badge");
-          if (badgeEl && badgeEl.textContent.trim() !== b.status) {
-            badgeEl.outerHTML = statusBadge(b.status);
-          }
-
-          // Update class warna kartu
+          if (badgeEl && badgeEl.textContent.trim() !== b.status) badgeEl.outerHTML = statusBadge(b.status);
           card.className = card.className.replace(/bin-(normal|sedang|penuh)/, cls);
-
-          // Update timestamp
           const timeEl = card.querySelector(".text-muted-sm");
           if (timeEl) timeEl.textContent = relTime(b.last_updated);
         });
-
         lastBinsData = bins;
-      } catch {
-        /* Gagal diam-diam — data lama tetap tampil */
-      }
+      } catch { /* silent fail */ }
     }
 
-    // ══════════════════════════════════════════════════════════
-    // loadBins — render penuh (pertama kali atau manual refresh)
-    // ══════════════════════════════════════════════════════════
     async function loadBins() {
       const wrap = document.getElementById("bins-wrap");
       try {
@@ -320,7 +295,7 @@
         const barColor = pct >= 80 ? "#f87171" : pct >= 50 ? "#fb923c" : "var(--emerald)";
         return `
           <div class="col-6 col-md-4 col-xl-3">
-            <div class="bin-card ${cls}" data-bin-id="${b.bin_id}">
+            <div class="bin-card ${cls}" data-bin-id="${b.id}">
               <div class="d-flex justify-content-between align-items-start mb-2">
                 <div class="bin-capacity">${pct}%</div>
                 ${statusBadge(b.status)}
@@ -335,16 +310,9 @@
       }).join("");
     }
 
-    // ══════════════════════════════════════════════════════════
-    // loadStats — pertama kali (wrapper ke updateStatsInPlace)
-    // ══════════════════════════════════════════════════════════
-    async function loadStats() {
-      await updateStatsInPlace();
-    }
-
-    // ══════════════════════════════════════════════════════════
-    // loadTop3 — render Top 3 leaderboard
-    // ══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════
+    // Top 3
+    // ══════════════════════════════════════════════════════════════
     async function loadTop3() {
       const wrap = document.getElementById("top3-wrap");
       try {
@@ -372,145 +340,128 @@
       }
     }
 
-    // ══════════════════════════════════════════════════════════
-    // heroTrigger — Trigger Throw dari landing page
-    // ALUR BENAR:
-    //   1. Validasi NIM + ambil qr_code user
-    //   2. POST /api/pending_throw  → daftarkan user ke bin
-    //   3. Polling /api/user/{nim}  → tunggu XP naik (ESP32 yg kirim /api/throw)
-    // ══════════════════════════════════════════════════════════
+    // ══════════════════════════════════════════════════════════════
+    // heroTrigger
+    // FIX UTAMA:
+    //   1. Tidak ada onclick di HTML → tidak konflik dengan form submit
+    //   2. Input NIM pakai autocomplete="off" dan tidak di-clear saat error
+    //   3. Semua update pakai DOM manipulation, BUKAN reload
+    //   4. Button disable/enable konsisten
+    // ══════════════════════════════════════════════════════════════
+
+    // ── Attach event listener ke button (bukan inline onclick)
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("ht-btn").addEventListener("click", heroTrigger);
+    });
+
     async function heroTrigger() {
-      const nim      = document.getElementById("ht-nim").value.trim();
+      const nimInput = document.getElementById("ht-nim");
+      const nim      = nimInput.value.trim();
       const btn      = document.getElementById("ht-btn");
       const statusEl = document.getElementById("ht-status");
 
       if (!nim) {
         showToast("Masukkan NIM kamu dulu", "error");
-        document.getElementById("ht-nim").focus();
+        nimInput.focus();
         return;
       }
 
-      btn.disabled = true;
-      btn.classList.add("trigger-anim");
-      btn.innerHTML = `
-        <div class="et-loader" style="border-top-color:#fff;width:18px;height:18px;flex-shrink:0"></div>
-        Menghubungi server...`;
-      statusEl.style.display = "block";
-      statusEl.innerHTML = `<div class="trigger-status trigger-waiting">${lucideInline("wifi", 15)} Menghubungi server...</div>`;
+      // Hentikan poller lama jika masih jalan
+      if (htPoller) { clearInterval(htPoller); htPoller = null; }
 
-      // Step 1 — Validasi user & ambil qr_code + bin
-      let user, bins;
+      // ── Disable button & tampilkan status loading
+      setHtBtnLoading(btn, true);
+      statusEl.style.display = "block";
+      statusEl.innerHTML = `<div class="trigger-status trigger-waiting">${lucideInline("wifi", 15)} Validasi NIM...</div>`;
+
+      // ── Step 1: Validasi user
+      let user;
       try {
         user = await apiGet(`/api/user/${nim}`);
         htCurrentNIM = nim;
         htLastXP     = user.total_xp ?? 0;
       } catch {
         showToast("NIM tidak ditemukan. Daftar di halaman Profil.", "error");
-        btn.disabled = false;
-        btn.classList.remove("trigger-anim");
-        btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
+        setHtBtnLoading(btn, false);
         statusEl.style.display = "none";
+        // FIX: Tidak clear input, user bisa koreksi NIM
+        nimInput.focus();
+        nimInput.select();
         return;
       }
 
+      // ── Step 2: Ambil bins
+      statusEl.innerHTML = `<div class="trigger-status trigger-waiting">${lucideInline("wifi", 15)} Mencari bin aktif...</div>`;
+      let bins;
       try {
         bins = await apiGet("/api/bins");
       } catch { bins = []; }
 
       if (!bins || bins.length === 0) {
         showToast("Tidak ada bin terdaftar. Hubungi admin.", "error");
-        btn.disabled = false;
-        btn.classList.remove("trigger-anim");
-        btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
+        setHtBtnLoading(btn, false);
         statusEl.innerHTML = `<div class="trigger-status trigger-waiting">${lucideInline("alert-triangle", 15)} Tidak ada bin aktif.</div>`;
         return;
       }
 
-      // Pilih bin yang tidak penuh, atau bin pertama
       const bin = bins.find(b => b.capacity_pct < 100) || bins[0];
 
-      // Step 2 — Cek dulu apakah bin sedang dipakai user lain
-      // [v1.2] Endpoint baru /api/pending_throw/status
-      let binBusy = false;
+      // ── Step 3: Cek slot bin
       try {
-        const statusBin = await apiGet(`/api/pending_throw/status?bin_id=${bin.id}`);
-        if (statusBin.busy) {
-          binBusy = true;
-          const sisa = statusBin.sisa_detik;
-          btn.disabled = false;
-          btn.classList.remove("trigger-anim");
-          btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
+        const slotStatus = await apiGet(`/api/pending_throw/status?bin_id=${bin.id}`);
+        if (slotStatus.busy) {
+          const sisa = slotStatus.sisa_detik;
+          setHtBtnLoading(btn, false);
           statusEl.innerHTML = `
             <div class="trigger-status trigger-waiting">
               ${lucideInline("alert-triangle", 15)}
-              <strong>Bin sedang dipakai</strong> user lain. Tunggu sekitar <strong>${sisa} detik</strong> lalu coba lagi.
+              <strong>Bin sedang dipakai</strong> user lain. Tunggu <strong>${sisa} detik</strong> lagi.
             </div>`;
           showToast(`Bin sedang dipakai. Tunggu ${sisa} detik.`, "error");
           return;
         }
-      } catch { /* Jika endpoint belum ada (server lama), lanjut saja */ }
+      } catch { /* Lanjut meski endpoint gagal */ }
 
-      // Step 3 — Daftarkan pending throw ke server (kirim nim juga untuk verifikasi)
-      // [v1.2] nim wajib disertakan agar backend verifikasi NIM ↔ QR code
+      // ── Step 4: Daftarkan pending throw
       try {
         await apiPost("/api/pending_throw", {
           user_qr_code: user.qr_code,
           bin_id:       bin.id,
-          nim:          nim,           // v1.2: wajib
+          nim:          nim,
         });
       } catch (e) {
-        btn.disabled = false;
-        btn.classList.remove("trigger-anim");
-        btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
-        // Handle 409 Conflict (bin sedang dipakai) — bisa juga dari race condition
-        const pesanErr = e.message || "";
-        if (pesanErr.includes("sedang dipakai") || pesanErr.includes("409")) {
-          statusEl.innerHTML = `
-            <div class="trigger-status trigger-waiting">
-              ${lucideInline("alert-triangle", 15)}
-              Bin sedang dipakai user lain. Coba beberapa detik lagi.
-            </div>`;
-          showToast("Bin sedang dipakai, coba lagi sebentar.", "error");
+        setHtBtnLoading(btn, false);
+        const pesan = e.message || "";
+        if (pesan.includes("sedang dipakai") || pesan.includes("409")) {
+          statusEl.innerHTML = `<div class="trigger-status trigger-waiting">${lucideInline("alert-triangle", 15)} Bin sedang dipakai. Coba beberapa detik lagi.</div>`;
+          showToast("Bin sedang dipakai, coba lagi.", "error");
         } else {
-          statusEl.innerHTML = `
-            <div class="trigger-status trigger-waiting">
-              ${lucideInline("alert-triangle", 15)} Gagal: ${pesanErr}
-            </div>`;
-          showToast("Gagal daftar throw: " + pesanErr, "error");
+          statusEl.innerHTML = `<div class="trigger-status trigger-waiting">${lucideInline("alert-triangle", 15)} Gagal: ${pesan}</div>`;
+          showToast("Gagal daftar throw: " + pesan, "error");
         }
         return;
       }
 
-      btn.innerHTML = `
-        <div class="et-loader" style="border-top-color:#fff;width:18px;height:18px;flex-shrink:0"></div>
-        Hardware aktif...`;
+      // ── Step 5: Tampilkan instruksi & mulai polling
+      btn.innerHTML = `<div class="et-loader" style="border-top-color:#fff;width:18px;height:18px;flex-shrink:0"></div> Hardware aktif...`;
       statusEl.innerHTML = `
         <div class="trigger-status trigger-waiting">
           ${lucideInline("wifi", 15)}
           <strong>Hardware aktif!</strong> Berdiri di depan bin <strong>${bin.location}</strong>, lalu buang sampah.
         </div>`;
 
-      // Step 4 — Polling tunggu ESP32 kirim /api/throw
-      // Website tidak kirim XP sendiri — menunggu konfirmasi dari sensor.
-      if (htPoller) { clearInterval(htPoller); htPoller = null; }
-
       const nimSaat  = htCurrentNIM;
       const xpAwal   = htLastXP;
       let pollCount  = 0;
-      const MAX_POLL = 24; // 24 × 5 detik = 120 detik (sesuai expire pending_throw)
+      const MAX_POLL = 24; // 24 × 5s = 120s
 
       htPoller = setInterval(async () => {
         pollCount++;
         try {
           const u = await apiGet(`/api/user/${nimSaat}`);
-
           if (u.total_xp > xpAwal) {
-            // ESP32 sudah kirim throw & XP masuk!
             clearInterval(htPoller); htPoller = null;
-            btn.disabled = false;
-            btn.classList.remove("trigger-anim");
-            btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
-
+            setHtBtnLoading(btn, false);
             const gained = u.total_xp - xpAwal;
             htLastXP = u.total_xp;
             statusEl.innerHTML = `
@@ -520,24 +471,19 @@
                 Total: ${u.total_xp.toLocaleString()} XP · ${levelBadge(u.total_xp)}
               </div>`;
             showToast(`+${gained} XP! Level: ${u.level}`, "success");
+            // Update data di background — TANPA reload halaman
             loadTop3();
             updateStatsInPlace();
             updateBinsInPlace();
-
           } else if (pollCount >= MAX_POLL) {
-            // Timeout 120 detik
             clearInterval(htPoller); htPoller = null;
-            btn.disabled = false;
-            btn.classList.remove("trigger-anim");
-            btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
-            // Hapus pending throw yang sudah expire
+            setHtBtnLoading(btn, false);
             try { await apiFetch(`/api/pending_throw?bin_id=${bin.id}`, { method: "DELETE" }); } catch {}
             statusEl.innerHTML = `
               <div class="trigger-status trigger-waiting">
                 ${lucideInline("alert-triangle", 15)}
-                Timeout 120 detik. Pastikan hardware aktif & sampah sudah masuk ke bin.
+                Timeout 120 detik. Pastikan hardware aktif &amp; sampah masuk ke bin.
               </div>`;
-
           } else {
             statusEl.innerHTML = `
               <div class="trigger-status trigger-active">
@@ -545,8 +491,19 @@
                 Sensor mendeteksi... (${pollCount * 5}s / 120s) — Bin: <strong>${bin.location}</strong>
               </div>`;
           }
-        } catch { /* Tetap polling walau ada error jaringan sementara */ }
+        } catch { /* Tetap polling saat network error sementara */ }
       }, 5000);
+    }
+
+    // ── Helper: set button ke mode loading atau normal
+    function setHtBtnLoading(btn, loading) {
+      if (loading) {
+        btn.disabled = true;
+        btn.innerHTML = `<div class="et-loader" style="border-top-color:#fff;width:18px;height:18px;flex-shrink:0"></div> Menghubungi server...`;
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = `${lucideInline("zap", 18)} Buang Sampah`;
+      }
     }
   </script>
 

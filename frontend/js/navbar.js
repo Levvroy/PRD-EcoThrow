@@ -137,20 +137,10 @@ let _throwLastXP    = 0;
 let _throwNIM       = null;
 let _throwBin       = null;
 
-const POPUP_API = window.location.hostname === "localhost"
-  ? "http://localhost:8000"
-  : "http://localhost:8000"; // ganti jika server beda IP
-
+// Gunakan apiFetch dari api.js — sudah pakai konstanta API yang benar
+// Ini menghindari duplikasi base URL dan menjamin konsistensi dengan halaman lain
 async function _popupFetch(path, opts = {}) {
-  const res = await fetch(POPUP_API + path, {
-    headers: { "Content-Type": "application/json" },
-    ...opts,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: "Error tidak diketahui" }));
-    throw new Error(err.detail || "Request gagal");
-  }
-  return res.json();
+  return apiFetch(path, opts);
 }
 
 function buildThrowPopup() {
