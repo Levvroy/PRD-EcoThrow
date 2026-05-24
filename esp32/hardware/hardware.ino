@@ -95,15 +95,15 @@
 
 //  KONFIGURASI - Ubah bagian ini sesuai environment kamu
 // WiFi
-const char* WIFI_SSID     = "KOPINAKO JATINANGOR";
-const char* WIFI_PASSWORD = "eskrimnako";
+const char* WIFI_SSID     = "B37";
+const char* WIFI_PASSWORD = "kecilsemua";
 
 // Server FastAPI - ganti IP dengan IP laptop kamu (cek: ipconfig)
-const char* SERVER_BASE       = "http://172.16.67.240:8000";
-const char* URL_UPDATE_BIN    = "http://172.16.67.240:8000/api/bin/update";
-const char* URL_THROW         = "http://172.16.67.240:8000/api/throw";
-const char* URL_PENDING_THROW = "http://172.16.67.240:8000/api/pending_throw";
-const char* URL_LEADERBOARD   = "http://172.16.67.240:8000/api/leaderboard?limit=1";
+const char* SERVER_BASE       = "http://192.168.0.104:8000";
+const char* URL_UPDATE_BIN    = "http://192.168.0.104:8000/api/bin/update";
+const char* URL_THROW         = "http://192.168.0.104:8000/api/throw";
+const char* URL_PENDING_THROW = "http://192.168.0.104:8000/api/pending_throw";
+const char* URL_LEADERBOARD   = "http://192.168.0.104:8000/api/leaderboard?limit=1";
 
 // Identitas bin ini - ganti dengan bin_id dari database
 const char* BIN_ID = "44208e55-d0e2-487d-9a81-f0f2f28b2468"; // GKU 2
